@@ -1,0 +1,31 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Datos filtrados (pueden ser grandes)
+datos_filtrados/
+
+# Estadísticas generadas
+estadisticas_*.csv
+reporte_filtrado_*.csv
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
