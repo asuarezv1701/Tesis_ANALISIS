@@ -382,8 +382,9 @@ def analizar_indice(indice):
     print(f"    - Umbral superior: {umbral_superior_sugerido:.4f} (percentil 95)")
     
     # Guardar resultados en CSV
-    archivo_salida = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                   f'estadisticas_{indice}.csv')
+    carpeta_reportes = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reportes')
+    os.makedirs(carpeta_reportes, exist_ok=True)
+    archivo_salida = os.path.join(carpeta_reportes, f'estadisticas_{indice}.csv')
     df_resultados.to_csv(archivo_salida, index=False)
     print(f"\n✓ Estadísticas guardadas en: {archivo_salida}")
     

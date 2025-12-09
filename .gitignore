@@ -9,13 +9,23 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+*.pyo
+*.pyd
 
 # Datos filtrados (pueden ser grandes)
 datos_filtrados/
 
-# Estadísticas generadas
-estadisticas_*.csv
-reporte_filtrado_*.csv
+# Reportes y estadísticas generadas
+reportes/
+
+# Visualizaciones generadas
+visualizaciones/
+
+# Archivos de credenciales - NUNCA subir
+.env
+*.env
+*.json
 
 # Jupyter Notebooks checkpoints
 .ipynb_checkpoints/
@@ -29,3 +39,12 @@ reporte_filtrado_*.csv
 # Sistema operativo
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Archivos temporales
+*.tmp
+*.temp

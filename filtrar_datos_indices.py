@@ -305,7 +305,7 @@ def solicitar_umbrales(indice):
     
     # Buscar archivo de estadísticas si existe
     archivo_stats = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                  f'estadisticas_{indice}.csv')
+                                  'reportes', f'estadisticas_{indice}.csv')
     
     rangos_desactivar = []
     percentiles = None
@@ -490,7 +490,9 @@ def filtrar_indice(indice, umbral_min, umbral_max, rangos_desactivar=None, perce
     # Guardar reporte de estadísticas
     if resultados:
         df_resultados = pd.DataFrame(resultados)
-        archivo_reporte = os.path.join(RUTA_SALIDA_BASE, f'reporte_filtrado_{indice}.csv')
+        carpeta_reportes = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reportes')
+        os.makedirs(carpeta_reportes, exist_ok=True)
+        archivo_reporte = os.path.join(carpeta_reportes, f'reporte_filtrado_{indice}.csv')
         df_resultados.to_csv(archivo_reporte, index=False)
         
         print("="*80)

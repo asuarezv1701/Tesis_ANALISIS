@@ -22,7 +22,7 @@ os.makedirs(SALIDA_VIS, exist_ok=True)
 
 
 def cargar_estadisticas(indice):
-    path = os.path.join(BASE_ANALISIS, f"estadisticas_{indice}.csv")
+    path = os.path.join(BASE_ANALISIS, 'reportes', f"estadisticas_{indice}.csv")
     if os.path.exists(path):
         df = pd.read_csv(path)
         # Convertir fecha si está
