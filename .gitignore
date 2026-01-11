@@ -16,11 +16,8 @@ __pycache__/
 # Datos filtrados (pueden ser grandes)
 datos_filtrados/
 
-# Reportes y estadísticas generadas
-reportes/
-
-# Visualizaciones generadas
-visualizaciones/
+# NOTA: Todas las salidas se guardan en resultados/
+resultados/
 
 # Archivos de credenciales - NUNCA subir
 .env
