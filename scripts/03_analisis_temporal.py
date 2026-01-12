@@ -94,9 +94,9 @@ def analizar_temporal_indice(indice):
     for i, img_info in enumerate(imagenes, 1):
         fecha_str = img_info['fecha_str'] or img_info['carpeta']
         fecha = img_info['fecha']
-        fuente_icono = "\ud83d\udcc4" if img_info.get('csv_pixeles') else "\ud83d\uddbc\ufe0f"
+        fuente_icono = "CSV" if img_info.get('csv_pixeles') else "TIFF"
         
-        print(f"[{i}/{len(imagenes)}] {fuente_icono} {fecha_str}... ", end='', flush=True)
+        print(f"[{i}/{len(imagenes)}] ({fuente_icono}) {fecha_str}... ", end='', flush=True)
         
         try:
             # Cargar datos de forma optimizada (CSV si existe, sino TIFF)
@@ -568,10 +568,19 @@ def menu_principal():
 
 
 if __name__ == "__main__":
-    menu_principal()
+    import os
+    if os.environ.get('ANALISIS_AUTOMATICO') == '1':
+        # Modo automático: analizar todos los índices sin menú
+        print("\n🚀 Modo automático: analizando TODOS los índices\n")
+        indices_disponibles = obtener_indices_disponibles()
+        for indice in indices_disponibles:
+            analizar_temporal_indice(indice)
+    else:
+        # Modo manual: mostrar menú
+        menu_principal()
     
     print("\n" + "="*80)
     print("ANÁLISIS TEMPORAL COMPLETADO")
     print("="*80)
-    print("\nReportes en: reportes/temporal/")
+    print("\nReportes en: reportes/03_temporal/")
     print("Visualizaciones en: visualizaciones/[INDICE]/temporal/")

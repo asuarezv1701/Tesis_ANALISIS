@@ -14,7 +14,8 @@ from pathlib import Path
 RUTA_PROYECTO = Path(__file__).parent.parent.absolute()
 
 # Ruta de datos de entrada (desde Tesis_DESCARGAS)
-RUTA_DESCARGAS = RUTA_PROYECTO.parent / "Tesis_DESCARGAS" / "descargas" / "UPIITA_contours_25nov.2025"
+NOMBRE_CARPETA_DESCARGAS = "UPIITA_contours_25nov.2025"
+RUTA_DESCARGAS = RUTA_PROYECTO.parent / "Tesis_DESCARGAS" / "descargas" / NOMBRE_CARPETA_DESCARGAS
 
 # Ruta del shapefile para enmascaramiento
 RUTA_SHAPEFILE = RUTA_PROYECTO.parent / "Tesis_DESCARGAS" / "shapefiles" / "UPIITA_contours_25nov.2025" / "UPIITA_contours_25Nov2025.shp"

@@ -27,6 +27,7 @@ sys.path.insert(0, str(project_root))
 from configuracion.config import (
     RUTA_REPORTES,
     RUTA_VISUALIZACIONES,
+    RUTA_REPORTES_PDF,
     INDICES_INFO,
     obtener_indices_disponibles
 )
@@ -177,8 +178,66 @@ Durante el período analizado, se observa una tendencia {tendencia.lower()}.
 
 
 def agregar_graficas(pdf, indice):
-    """Agrega las gráficas principales al PDF."""
+    """Agrega las gráficas principales al PDF con descripciones detalladas."""
     carpeta_vis = RUTA_VISUALIZACIONES / indice
+    
+    # Diccionario de descripciones detalladas por tipo de gráfica
+    descripciones = {
+        'serie_temporal': f"""
+INTERPRETACIÓN: Esta gráfica muestra cómo ha cambiado el valor promedio del índice {indice} 
+a lo largo del tiempo. Cada punto representa una imagen satelital capturada en una fecha específica.
+
+QUÉ BUSCAR:
+• Tendencia general: ¿La línea sube (mejora) o baja (deterioro) con el tiempo?
+• Variabilidad: ¿Hay picos o caídas bruscas? Pueden indicar eventos climáticos o cambios estacionales
+• Patrón estacional: ¿Se repiten ciclos de subida/bajada? Es normal en vegetación por estaciones
+""",
+        'histograma': f"""
+INTERPRETACIÓN: Este histograma muestra cómo se distribuyen los valores del índice {indice}
+en toda el área de estudio. El eje vertical indica cuántos píxeles tienen cada valor.
+
+QUÉ BUSCAR:
+• Forma de la distribución: ¿Es una campana simétrica o tiene colas largas?
+• Picos múltiples: Pueden indicar diferentes tipos de vegetación o zonas en el área
+• Líneas de media/mediana: Si están juntas, la distribución es simétrica
+""",
+        'boxplot': f"""
+INTERPRETACIÓN: Los boxplots muestran el rango de valores para cada fecha. La caja representa
+el 50% central de los datos, y los bigotes muestran el rango completo (excluyendo valores atípicos).
+
+QUÉ BUSCAR:
+• Altura de las cajas: Mayor altura = mayor variabilidad en esa fecha
+• Posición vertical: Cajas más arriba = valores más altos de {indice}
+• Puntos aislados: Son valores extremos que se salen del patrón normal
+""",
+        'mapa_calor': f"""
+INTERPRETACIÓN: Este mapa muestra la distribución espacial del índice {indice} en el área de estudio.
+Los colores cálidos (rojos) y fríos (verdes/azules) representan diferentes niveles de vegetación.
+
+QUÉ BUSCAR:
+• Zonas homogéneas: Áreas grandes del mismo color indican uniformidad
+• Patrones espaciales: ¿Hay gradientes? ¿Zonas claramente diferentes?
+• Hotspots/Coldspots: Puntos muy diferentes al entorno pueden ser áreas de interés
+""",
+        'tendencia': f"""
+INTERPRETACIÓN: Esta gráfica incluye una línea de tendencia (regresión lineal) que resume
+la dirección general del cambio en el tiempo.
+
+QUÉ BUSCAR:
+• Pendiente: Si la línea sube, hay mejora; si baja, hay deterioro
+• R² (coeficiente de determinación): Valores cercanos a 1.0 indican tendencia fuerte
+• Dispersión: Puntos muy alejados de la línea indican mucha variabilidad
+""",
+        'prediccion': f"""
+INTERPRETACIÓN: Este gráfico muestra los valores históricos (datos reales) y la proyección
+hacia el futuro basada en patrones identificados por el modelo de inteligencia artificial.
+
+QUÉ BUSCAR:
+• Zona sombreada: Representa el intervalo de confianza (incertidumbre de la predicción)
+• Continuidad: ¿La predicción sigue el patrón histórico o cambia bruscamente?
+• Divergencia: Bandas de confianza que se amplían indican mayor incertidumbre a futuro
+"""
+    }
     
     # Buscar gráficas por tipo
     tipos_analisis = ['exploratorio', 'temporal', 'espacial', 'prediccion']
@@ -197,23 +256,55 @@ def agregar_graficas(pdf, indice):
         
         for img_path in imagenes[:10]:  # Máximo 10 imágenes por tipo
             fig = plt.figure(figsize=(8.5, 11))
+            fig.patch.set_facecolor('white')
             
             # Título con nombre del archivo
-            plt.text(0.5, 0.98, img_path.stem.replace('_', ' ').title(),
-                     ha='center', va='top', fontsize=14, fontweight='bold')
+            titulo = img_path.stem.replace('_', ' ').title()
+            plt.text(0.5, 0.97, titulo,
+                     ha='center', va='top', fontsize=14, fontweight='bold',
+                     transform=fig.transFigure)
             
-            # Cargar y mostrar imagen
+            # Cargar y mostrar imagen (ajustada para dejar espacio a descripción)
             img = plt.imread(img_path)
-            ax = plt.axes([0.1, 0.1, 0.8, 0.85])
+            ax = plt.axes([0.05, 0.35, 0.9, 0.6])
             ax.imshow(img)
             ax.axis('off')
+            
+            # Agregar descripción detallada según el tipo de gráfica
+            descripcion = "QUÉ MUESTRA ESTA GRÁFICA:\n\n"
+            
+            # Identificar tipo de gráfica por nombre de archivo
+            nombre_lower = img_path.stem.lower()
+            if 'serie' in nombre_lower or 'temporal' in nombre_lower:
+                descripcion += descripciones['serie_temporal']
+            elif 'histograma' in nombre_lower or 'distribucion' in nombre_lower:
+                descripcion += descripciones['histograma']
+            elif 'boxplot' in nombre_lower or 'box' in nombre_lower:
+                descripcion += descripciones['boxplot']
+            elif 'mapa' in nombre_lower or 'espacial' in nombre_lower or 'hotspot' in nombre_lower:
+                descripcion += descripciones['mapa_calor']
+            elif 'tendencia' in nombre_lower or 'regresion' in nombre_lower:
+                descripcion += descripciones['tendencia']
+            elif 'prediccion' in nombre_lower or 'forecast' in nombre_lower:
+                descripcion += descripciones['prediccion']
+            else:
+                descripcion += f"""Esta visualización forma parte del análisis {tipo} del índice {indice}.
+Revise los valores, patrones y tendencias mostradas en la gráfica para identificar
+características importantes de la vegetación en el área de estudio."""
+            
+            # Agregar descripción en la parte inferior
+            plt.text(0.05, 0.32, descripcion,
+                     ha='left', va='top', fontsize=8,
+                     transform=fig.transFigure,
+                     wrap=True, family='sans-serif',
+                     bbox=dict(boxstyle='round', facecolor='#F8F9FA', alpha=0.8, pad=10))
             
             pdf.savefig(fig, bbox_inches='tight')
             plt.close()
 
 
 def agregar_tabla_resultados(pdf, indice):
-    """Agrega tablas con resultados numéricos."""
+    """Agrega tablas con resultados numéricos mejoradas."""
     agregar_seccion(pdf, 'RESULTADOS NUMÉRICOS')
     
     # Buscar CSVs de resultados
@@ -232,44 +323,103 @@ def agregar_tabla_resultados(pdf, indice):
             try:
                 df = pd.read_csv(csv_path)
                 
-                # Limitar columnas y filas para que quepa
-                if len(df.columns) > 8:
-                    df = df.iloc[:, :8]
+                # Si está vacío, saltar
+                if len(df) == 0:
+                    continue
                 
-                if len(df) > 30:
-                    df = df.head(30)
+                # Formatear números para mejor legibilidad
+                for col in df.columns:
+                    if df[col].dtype in ['float64', 'float32']:
+                        # Redondear números flotantes a 4 decimales
+                        df[col] = df[col].round(4)
                 
-                # Crear figura
+                # Limitar columnas para que quepa (máximo 7 para buen espaciado)
+                columnas_mostrar = df.columns[:7]
+                df_mostrar = df[columnas_mostrar].copy()
+                
+                # Limitar filas (máximo 25 para evitar tablas muy largas)
+                if len(df_mostrar) > 25:
+                    df_mostrar = df_mostrar.head(25)
+                    nota_truncada = f"(Mostrando primeras 25 de {len(df)} filas)"
+                else:
+                    nota_truncada = ""
+                
+                # Acortar nombres de columnas si son muy largos
+                df_mostrar.columns = [col[:20] + '...' if len(col) > 20 else col 
+                                     for col in df_mostrar.columns]
+                
+                # Crear figura con más espacio
                 fig, ax = plt.subplots(figsize=(8.5, 11))
                 ax.axis('tight')
                 ax.axis('off')
                 
                 # Título
                 titulo = csv_path.stem.replace('_', ' ').title()
-                plt.text(0.5, 0.98, titulo, ha='center', va='top',
-                         fontsize=12, fontweight='bold', transform=fig.transFigure)
+                titulo_y = 0.98 if not nota_truncada else 0.97
+                plt.text(0.5, titulo_y, titulo, ha='center', va='top',
+                         fontsize=13, fontweight='bold', transform=fig.transFigure)
                 
-                # Crear tabla
-                tabla = ax.table(cellText=df.values,
-                                colLabels=df.columns,
+                if nota_truncada:
+                    plt.text(0.5, 0.94, nota_truncada, ha='center', va='top',
+                             fontsize=9, style='italic', color='gray',
+                             transform=fig.transFigure)
+                
+                # Convertir DataFrame a texto formateado
+                cell_text = []
+                for idx, row in df_mostrar.iterrows():
+                    row_text = []
+                    for val in row:
+                        if pd.isna(val):
+                            row_text.append('-')
+                        elif isinstance(val, (int, np.integer)):
+                            row_text.append(f'{val:,}')
+                        elif isinstance(val, (float, np.floating)):
+                            row_text.append(f'{val:.4f}')
+                        else:
+                            # Acortar texto si es muy largo
+                            val_str = str(val)
+                            row_text.append(val_str[:25] + '...' if len(val_str) > 25 else val_str)
+                    cell_text.append(row_text)
+                
+                # Crear tabla con mejor formato
+                tabla = ax.table(cellText=cell_text,
+                                colLabels=df_mostrar.columns,
                                 cellLoc='center',
                                 loc='center',
-                                bbox=[0, 0, 1, 0.9])
+                                bbox=[0.05, 0.05, 0.9, 0.85])
                 
+                # Configuración de fuente y tamaño
                 tabla.auto_set_font_size(False)
-                tabla.set_fontsize(8)
-                tabla.scale(1, 1.5)
+                tabla.set_fontsize(9)
                 
-                # Estilo
+                # Ajustar altura de filas para mejor legibilidad
+                tabla.scale(1, 2.0)
+                
+                # Estilo mejorado
                 for (i, j), cell in tabla.get_celld().items():
+                    # Encabezado
                     if i == 0:
                         cell.set_facecolor('#2E86AB')
-                        cell.set_text_props(weight='bold', color='white')
+                        cell.set_text_props(weight='bold', color='white', fontsize=10)
+                        cell.set_height(0.08)
                     else:
+                        # Filas alternas
                         if i % 2 == 0:
-                            cell.set_facecolor('#F5F5F5')
+                            cell.set_facecolor('#F8F9FA')
+                        else:
+                            cell.set_facecolor('white')
+                        
+                        # Bordes suaves
+                        cell.set_edgecolor('#E0E0E0')
+                        cell.set_linewidth(0.5)
                 
-                pdf.savefig(fig, bbox_inches='tight')
+                # Descripción de la tabla
+                descripcion_tabla = f"""Fuente: {carpeta.replace('_', ' ').title()} | Archivo: {csv_path.name}"""
+                plt.text(0.5, 0.01, descripcion_tabla, ha='center', va='bottom',
+                         fontsize=7, style='italic', color='gray',
+                         transform=fig.transFigure)
+                
+                pdf.savefig(fig, bbox_inches='tight', dpi=150)
                 plt.close()
                 
             except Exception as e:

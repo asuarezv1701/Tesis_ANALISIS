@@ -525,7 +525,23 @@ def mostrar_resumen_global(resultados):
 # ============================================================================
 
 if __name__ == "__main__":
-    menu_principal()
+    import os
+    if os.environ.get('ANALISIS_AUTOMATICO') == '1':
+        # Modo automático: analizar todos los índices sin menú
+        print("\n🚀 Modo automático: analizando TODOS los índices\n")
+        indices_disponibles = obtener_indices_disponibles()
+        
+        resultados_globales = {}
+        for indice in indices_disponibles:
+            df = analizar_indice(indice)
+            if df is not None:
+                resultados_globales[indice] = df
+        
+        if resultados_globales:
+            mostrar_resumen_global(resultados_globales)
+    else:
+        # Modo manual: mostrar menú interactivo
+        menu_principal()
     
     print("\n" + "="*80)
     print("ANÁLISIS EXPLORATORIO COMPLETADO")

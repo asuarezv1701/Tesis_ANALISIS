@@ -222,9 +222,10 @@ def analizar_diferencias_temporales(indice):
     }
 
 
-def analizar_espacial_indice(indice, analizar_todas=False):
+def analizar_espacial_indice(indice):
     """
     Realiza análisis espacial completo de un índice.
+    Analiza TODAS las imágenes disponibles.
     """
     print(f"\n{'#'*80}")
     print(f"# ANÁLISIS ESPACIAL: {indice}")
@@ -241,35 +242,20 @@ def analizar_espacial_indice(indice, analizar_todas=False):
         return None
     
     print(f"Encontradas {len(imagenes)} imágenes")
+    print("Analizando TODAS las imágenes...")
     
     resultados_imagenes = []
     
-    if analizar_todas:
-        # Analizar todas las imágenes
-        for i, img_info in enumerate(imagenes, 1):
-            fecha_str = img_info['fecha_str'] or img_info['carpeta']
-            print(f"\n[{i}/{len(imagenes)}] {fecha_str}")
-            
-            try:
-                resultado = analizar_espacial_imagen(img_info['ruta'], indice, fecha_str)
-                resultados_imagenes.append(resultado)
-            except Exception as e:
-                print(f"⚠️  Error al analizar {fecha_str}: {e}")
-    else:
-        # Analizar solo primera, última y mediana
-        indices_analizar = [0, len(imagenes)//2, -1]
-        etiquetas = ['Primera', 'Mediana', 'Última']
+    # Analizar todas las imágenes
+    for i, img_info in enumerate(imagenes, 1):
+        fecha_str = img_info['fecha_str'] or img_info['carpeta']
+        print(f"\n[{i}/{len(imagenes)}] {fecha_str}")
         
-        for idx, etiqueta in zip(indices_analizar, etiquetas):
-            img_info = imagenes[idx]
-            fecha_str = img_info['fecha_str'] or img_info['carpeta']
-            print(f"\n📅 {etiqueta} imagen: {fecha_str}")
-            
-            try:
-                resultado = analizar_espacial_imagen(img_info['ruta'], indice, fecha_str)
-                resultados_imagenes.append(resultado)
-            except Exception as e:
-                print(f"⚠️  Error: {e}")
+        try:
+            resultado = analizar_espacial_imagen(img_info['ruta'], indice, fecha_str)
+            resultados_imagenes.append(resultado)
+        except Exception as e:
+            print(f"⚠️  Error al analizar {fecha_str}: {e}")
     
     # Analizar diferencias temporales
     print(f"\n{'='*80}")
@@ -543,8 +529,7 @@ def menu_principal():
             print(f"  {i}. {indice:<8} - {INDICES_INFO[indice]['nombre']}")
         
         print("\nOPCIONES:")
-        print("  A. Analizar TODOS los índices (muestra representativa)")
-        print("  F. Analizar TODAS las fechas de un índice")
+        print("  A. Analizar TODOS los índices")
         print("  0. Salir")
         
         opcion = input("\nSelecciona una opción: ").strip().upper()
@@ -553,27 +538,27 @@ def menu_principal():
             break
         elif opcion == 'A':
             for indice in indices_disponibles:
-                analizar_espacial_indice(indice, analizar_todas=False)
-        elif opcion == 'F':
-            print("\nSelecciona el índice:")
-            for i, indice in enumerate(indices_disponibles, 1):
-                print(f"  {i}. {indice}")
-            idx_str = input("Número: ").strip()
-            if idx_str.isdigit():
-                idx = int(idx_str) - 1
-                if 0 <= idx < len(indices_disponibles):
-                    analizar_espacial_indice(indices_disponibles[idx], analizar_todas=True)
+                analizar_espacial_indice(indice)
         elif opcion.isdigit():
             num = int(opcion) - 1
             if 0 <= num < len(indices_disponibles):
-                analizar_espacial_indice(indices_disponibles[num], analizar_todas=False)
+                analizar_espacial_indice(indices_disponibles[num])
 
 
 if __name__ == "__main__":
-    menu_principal()
+    import os
+    if os.environ.get('ANALISIS_AUTOMATICO') == '1':
+        # Modo automático: analizar todos los índices con todas las fechas
+        print("\n🚀 Modo automático: analizando TODOS los índices con TODAS las fechas\n")
+        indices_disponibles = obtener_indices_disponibles()
+        for indice in indices_disponibles:
+            analizar_espacial_indice(indice)
+    else:
+        # Modo manual: mostrar menú
+        menu_principal()
     
     print("\n" + "="*80)
     print("ANÁLISIS ESPACIAL COMPLETADO")
     print("="*80)
-    print("\nReportes en: reportes/espacial/")
+    print("\nReportes en: reportes/02_espacial/")
     print("Visualizaciones en: visualizaciones/[INDICE]/espacial/")

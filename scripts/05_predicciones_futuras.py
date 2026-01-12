@@ -513,8 +513,8 @@ def ejecutar_prediccion(indice, n_dias_futuro=30):
     print("="*80)
     
     # 1. Cargar datos
-    from configuracion.config import RUTA_DESCARGAS, NOMBRE_CARPETA_DESCARGAS
-    ruta_indice = RUTA_DESCARGAS / NOMBRE_CARPETA_DESCARGAS / indice
+    from configuracion.config import RUTA_DESCARGAS
+    ruta_indice = RUTA_DESCARGAS / indice
     imagenes_info = listar_imagenes_indice(ruta_indice)
     
     if len(imagenes_info) < 5:

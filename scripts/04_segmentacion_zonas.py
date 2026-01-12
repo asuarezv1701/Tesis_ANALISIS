@@ -771,10 +771,19 @@ def menu_principal():
 
 
 if __name__ == "__main__":
-    menu_principal()
+    import os
+    if os.environ.get('ANALISIS_AUTOMATICO') == '1':
+        # Modo automático: analizar todos los índices con clustering
+        print("\n🚀 Modo automático: segmentando TODOS los índices con clustering\n")
+        indices_disponibles = obtener_indices_disponibles()
+        for indice in indices_disponibles:
+            analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5)
+    else:
+        # Modo manual: mostrar menú
+        menu_principal()
     
     print("\n" + "="*80)
     print("SEGMENTACIÓN DE ZONAS COMPLETADA")
     print("="*80)
-    print("\nReportes en: reportes/segmentacion/")
+    print("\nReportes en: reportes/04_segmentacion/")
     print("Visualizaciones en: visualizaciones/[INDICE]/segmentacion/")

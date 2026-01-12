@@ -124,7 +124,7 @@ ADVERTENCIA: Esto puede tomar 15-25 minutos
     
     for i, (nombre, script) in enumerate(analisis, 1):
         print(f"\n{'='*80}")
-        print(f"PASO {i}/6: {nombre}")
+        print(f"PASO {i}/{len(analisis)}: {nombre}")
         print(f"{'='*80}")
         print(f"Iniciando a las {time.strftime('%H:%M:%S')}")
         
