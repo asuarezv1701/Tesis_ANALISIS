@@ -9,7 +9,7 @@ Este script realiza análisis espacial completo:
 5. Análisis de diferencias temporales
 6. Estadísticas por cuadrantes
 
-⭐ ANÁLISIS CLAVE PARA IDENTIFICAR PATRONES ESPACIALES
+ANÁLISIS CLAVE PARA IDENTIFICAR PATRONES ESPACIALES
 """
 
 import sys
@@ -67,7 +67,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
     print(f"{'='*80}")
     
     # Cargar imagen
-    print("\n1️⃣  Cargando imagen...")
+    print("\n[1] Cargando imagen...")
     datos = cargar_imagen_enmascarada(ruta_imagen, RUTA_SHAPEFILE)
     print(f"   ✓ Cargada: {datos.shape[0]}x{datos.shape[1]} pixeles")
     print(f"   ✓ Datos válidos: {np.sum(~np.isnan(datos))}")
@@ -80,7 +80,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
     }
     
     # 2. Estadísticas espaciales básicas
-    print("\n2️⃣  Calculando estadísticas espaciales...")
+    print("\n[2] Calculando estadísticas espaciales...")
     stats = calcular_estadisticas_espaciales(datos)
     if stats:
         print(f"   • Media: {stats['media']:.4f}")
@@ -89,7 +89,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
         resultados['estadisticas'] = stats
     
     # 3. Detección de hotspots
-    print("\n3️⃣  Detectando hotspots y coldspots...")
+    print("\n[3] Detectando hotspots y coldspots...")
     hotspots_result = detectar_hotspots(datos, metodo='percentil', umbral=10)
     if hotspots_result:
         print(f"   • Hotspots: {hotspots_result['n_hotspots']} "
@@ -109,7 +109,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
         resultados['regiones_hotspots'] = regiones_hot
     
     # 4. Clustering K-means
-    print("\n4️⃣  Aplicando clustering K-means...")
+    print("\n[4] Aplicando clustering K-means...")
     kmeans_result = clustering_kmeans(datos, n_clusters=5, incluir_coords=True)
     if kmeans_result:
         print(f"   • {kmeans_result['n_clusters']} clusters identificados")
@@ -122,7 +122,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
         resultados['kmeans'] = kmeans_result
     
     # 5. Autocorrelación espacial (Moran's I)
-    print("\n5️⃣  Calculando autocorrelación espacial (Moran's I)...")
+    print("\n[5] Calculando autocorrelación espacial (Moran's I)...")
     moran = calcular_moran_i(datos, vecindad='queen')
     if moran:
         print(f"   • I de Moran: {moran['moran_i']:.4f}")
@@ -133,7 +133,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
         resultados['moran'] = moran
     
     # 6. División en cuadrantes
-    print("\n6️⃣  Analizando por cuadrantes...")
+    print("\n[6] Analizando por cuadrantes...")
     cuadrantes = dividir_en_cuadrantes(datos, n_filas=3, n_cols=3)
     print(f"   • Dividido en {cuadrantes['n_total_cuadrantes']} cuadrantes")
     print("   • Estadísticas por cuadrante:")
@@ -144,7 +144,7 @@ def analizar_espacial_imagen(ruta_imagen, indice, fecha_str):
     resultados['cuadrantes'] = cuadrantes
     
     print(f"\n{'='*80}")
-    print("✅ ANÁLISIS ESPACIAL COMPLETADO")
+    print("\nANÁLISIS ESPACIAL COMPLETADO")
     print(f"{'='*80}")
     
     return resultados
@@ -212,7 +212,7 @@ def analizar_diferencias_temporales(indice):
             })
     
     print(f"\n{'='*80}")
-    print(f"✅ Analizadas {len(diferencias)} transiciones")
+    print(f"\nAnalizadas {len(diferencias)} transiciones")
     print(f"{'='*80}")
     
     return {
@@ -238,7 +238,7 @@ def analizar_espacial_indice(indice):
     imagenes = listar_imagenes_indice(ruta_indice)
     
     if not imagenes:
-        print(f"\n⚠️  No se encontraron imágenes para {indice}")
+        print(f"\nADVERTENCIA: No se encontraron imágenes para {indice}")
         return None
     
     print(f"Encontradas {len(imagenes)} imágenes")
@@ -392,6 +392,202 @@ def guardar_reportes_espaciales(indice, resultados_imagenes, resultado_diff):
     print(f"✓ Guardados {len(archivos)} reportes")
     for nombre in archivos:
         print(f"  • {nombre}")
+    
+    # 6. Generar archivo TXT explicativo de colores
+    generar_explicacion_colores_txt(indice, resultados_imagenes, timestamp, carpeta_reportes)
+
+
+def generar_explicacion_colores_txt(indice, resultados_imagenes, timestamp, carpeta_reportes):
+    """
+    Genera un archivo TXT que explica detalladamente qué significa
+    cada color en las visualizaciones del análisis espacial.
+    """
+    from configuracion.config import INDICES_INFO
+    
+    archivo_txt = carpeta_reportes / f"EXPLICACION_COLORES_{indice}_{timestamp}.txt"
+    
+    contenido = f"""
+================================================================================
+  GUÍA DE INTERPRETACIÓN DE COLORES - ANÁLISIS ESPACIAL
+  Índice: {indice} - {INDICES_INFO[indice]['nombre']}
+================================================================================
+
+Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Este documento explica el significado de los colores en las visualizaciones
+del análisis espacial. Use esta guía como referencia para interpretar
+correctamente los mapas generados.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. MAPA DE CALOR (mapa_calor_*.png)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los mapas de calor usan una paleta de degradado que representa la salud
+de la vegetación:
+
+  COLOR           VALOR {indice:<6}  SIGNIFICADO
+  ─────────────────────────────────────────────────────────────────────
+  🟤 Marrón       < 0.2           Suelo desnudo o vegetación muy escasa
+                                  → Áreas sin cobertura vegetal significativa
+  
+  🟡 Amarillo     0.2 - 0.4       Vegetación dispersa o con estrés
+                                  → Posible sequía, enfermedad o baja densidad
+  
+  🟢 Verde claro  0.4 - 0.6       Vegetación moderada
+                                  → Cobertura vegetal en condiciones normales
+  
+  🟢 Verde medio  0.6 - 0.8       Vegetación densa y saludable
+                                  → Buena actividad fotosintética
+  
+  🟢 Verde oscuro > 0.8           Vegetación muy densa y vigorosa
+                                  → Excelente salud vegetal
+
+NOTA: Los valores exactos pueden variar según el índice. Para NDMI (humedad),
+      valores negativos indican vegetación seca.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. MAPA DE HOTSPOTS Y COLDSPOTS (hotspots_*.png)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Este mapa identifica zonas que se desvían significativamente del promedio:
+
+  COLOR           NOMBRE        QUÉ SIGNIFICA
+  ─────────────────────────────────────────────────────────────────────
+  🟠 Naranja      HOTSPOT       Zonas con valores EXCEPCIONALMENTE ALTOS
+                                → Vegetación inusualmente saludable
+                                → Posible área de interés positivo
+                                → Revisar: ¿riego adicional? ¿microclima favorable?
+  
+  🔵 Azul        COLDSPOT       Zonas con valores EXCEPCIONALMENTE BAJOS
+                                → Vegetación con problemas
+                                → ATENCIÓN: Posible estrés, enfermedad o daño
+                                → Requiere investigación en campo
+  
+  ⬜ Gris        NORMAL         Valores dentro del rango esperado
+                                → Sin anomalías detectadas
+
+MÉTODO: Se identifican usando estadística (valores fuera de 2 desviaciones
+        estándar del promedio).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. MAPA DE CLUSTERING K-MEANS (clustering_*.png)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El clustering agrupa automáticamente zonas con características similares.
+Los colores NO tienen un significado fijo - representan GRUPOS diferentes:
+
+  COLOR           ZONA          QUÉ REPRESENTA
+  ─────────────────────────────────────────────────────────────────────
+  🔴 Rojo        Zona 1        Grupo de píxeles con valores similares
+  🟠 Naranja     Zona 2        Otro grupo con características distintas
+  🟡 Amarillo    Zona 3        Grupo intermedio
+  🟢 Verde       Zona 4        Otro grupo diferenciado
+  🔵 Azul        Zona 5        Grupo final
+
+IMPORTANTE - CÓMO INTERPRETAR:
+  
+  • Los colores identifican GRUPOS, no niveles de calidad
+  • Para saber qué significa cada zona, revise el archivo CSV de clustering
+  • En el CSV encontrará el VALOR MEDIO de cada zona
+  • Zona con valor medio ALTO = vegetación más saludable
+  • Zona con valor medio BAJO = vegetación menos saludable o suelo
+
+EJEMPLO DE INTERPRETACIÓN:
+  Si el CSV muestra:
+    - Zona 1 (Rojo):    media = 0.25  → Vegetación escasa
+    - Zona 2 (Naranja): media = 0.45  → Vegetación moderada
+    - Zona 5 (Azul):    media = 0.72  → Vegetación densa
+
+  Entonces el azul representa las mejores áreas y el rojo las más pobres.
+
+"""
+    
+    # Agregar información específica de los clusters si está disponible
+    if resultados_imagenes and len(resultados_imagenes) > 0:
+        res = resultados_imagenes[-1]  # Usar el más reciente
+        if 'kmeans' in res:
+            contenido += f"""
+DATOS DE CLUSTERING PARA {res['fecha']}:
+────────────────────────────────────────
+"""
+            for i, cluster_info in enumerate(res['kmeans']['stats_clusters']):
+                contenido += f"""
+  Zona {i+1}:
+    • Porcentaje del área: {cluster_info['porcentaje']:.1f}%
+    • Valor medio {indice}: {cluster_info['media']:.4f}
+    • Desviación estándar: {cluster_info['std']:.4f}
+    • Valor mínimo: {cluster_info['min']:.4f}
+    • Valor máximo: {cluster_info['max']:.4f}
+"""
+            
+            # Ordenar zonas por valor medio para interpretación
+            zonas_ordenadas = sorted(enumerate(res['kmeans']['stats_clusters']), 
+                                    key=lambda x: x[1]['media'])
+            
+            contenido += f"""
+INTERPRETACIÓN ORDENADA (de peor a mejor vegetación):
+─────────────────────────────────────────────────────
+"""
+            for orden, (idx, info) in enumerate(zonas_ordenadas, 1):
+                if info['media'] < 0.3:
+                    estado = "⚠️  Vegetación escasa/suelo"
+                elif info['media'] < 0.5:
+                    estado = "🟡 Vegetación moderada"
+                elif info['media'] < 0.7:
+                    estado = "🟢 Vegetación saludable"
+                else:
+                    estado = "🌿 Vegetación muy vigorosa"
+                
+                contenido += f"  {orden}. Zona {idx+1}: media={info['media']:.3f}  {estado}\n"
+
+    contenido += """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. MAPA DE DIFERENCIAS TEMPORALES (diferencia_*.png)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Muestra cómo cambió la vegetación entre dos fechas:
+
+  COLOR              CAMBIO           SIGNIFICADO
+  ─────────────────────────────────────────────────────────────────────
+  🔴 Rojo oscuro    Muy negativo     Deterioro severo de vegetación
+                                     → Pérdida significativa de cobertura
+  
+  🔴 Rojo claro    Negativo          Disminución moderada
+                                     → Posible estrés estacional o poda
+  
+  ⬜ Blanco        Sin cambio        Área estable
+                                     → Condiciones mantenidas
+  
+  🟢 Verde claro   Positivo          Mejora moderada
+                                     → Crecimiento de vegetación
+  
+  🟢 Verde oscuro  Muy positivo      Mejora significativa
+                                     → Recuperación o nuevo crecimiento
+
+
+================================================================================
+RESUMEN RÁPIDO
+================================================================================
+
+  MAPA DE CALOR:     Degradado marrón→amarillo→verde = malo→regular→bueno
+  HOTSPOTS:          Naranja=excepcionalmente alto, Azul=excepcionalmente bajo
+  CLUSTERING:        Colores=grupos (ver CSV para valores de cada grupo)
+  DIFERENCIAS:       Rojo=empeoró, Blanco=igual, Verde=mejoró
+
+
+================================================================================
+Para más información, consulte los archivos CSV generados en esta misma carpeta.
+================================================================================
+"""
+    
+    with open(archivo_txt, 'w', encoding='utf-8') as f:
+        f.write(contenido)
+    
+    print(f"  • {archivo_txt.name} (guía de interpretación de colores)")
 
 
 # ============================================================================
@@ -400,12 +596,15 @@ def guardar_reportes_espaciales(indice, resultados_imagenes, resultado_diff):
 
 def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_diff):
     """
-    Genera visualizaciones del análisis espacial.
+    Genera visualizaciones del análisis espacial con paletas de degradado
+    y descripciones claras de lo que representa cada color.
     """
     print("\n📈 Generando visualizaciones...")
     
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    from matplotlib.colors import LinearSegmentedColormap
+    import matplotlib.colorbar as cbar
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     carpeta_vis = RUTA_VISUALIZACIONES / indice / "espacial"
@@ -413,87 +612,330 @@ def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_di
     
     visualizaciones = []
     
+    # Crear paleta de degradado personalizada (marrón -> amarillo -> verde)
+    # Representa: vegetación escasa -> moderada -> saludable
+    colores_degradado = [
+        '#8B4513',  # Marrón (valores bajos - suelo/vegetación muy escasa)
+        '#CD853F',  # Marrón claro
+        '#DAA520',  # Dorado
+        '#FFEB3B',  # Amarillo (valores medios)
+        '#9ACD32',  # Verde amarillento
+        '#32CD32',  # Verde lima (valores altos)
+        '#006400'   # Verde oscuro (vegetación muy saludable)
+    ]
+    cmap_vegetacion = LinearSegmentedColormap.from_list('vegetacion', colores_degradado, N=256)
+    
+    # Interpretaciones por rango de valor según el índice
+    def obtener_interpretacion(indice, valor):
+        """Retorna interpretación del valor según el índice."""
+        if indice in ['NDVI', 'NDRE', 'MSAVI', 'RECI']:
+            if valor < 0:
+                return 'Agua o suelo desnudo'
+            elif valor < 0.2:
+                return 'Suelo/Vegetación muy escasa'
+            elif valor < 0.4:
+                return 'Vegetación dispersa o stress'
+            elif valor < 0.6:
+                return 'Vegetación moderada'
+            elif valor < 0.8:
+                return 'Vegetación densa y saludable'
+            else:
+                return 'Vegetación muy densa'
+        elif indice == 'NDMI':
+            if valor < -0.3:
+                return 'Vegetación muy seca'
+            elif valor < 0:
+                return 'Vegetación con bajo contenido de agua'
+            elif valor < 0.2:
+                return 'Contenido de agua moderado'
+            elif valor < 0.4:
+                return 'Buen contenido de agua'
+            else:
+                return 'Alto contenido de agua'
+        return ''
+    
     # Visualizaciones para cada imagen analizada
     for res in resultados_imagenes:
         fecha = res['fecha']
         datos = res['imagen']
         
-        # 1. Mapa de calor básico
+        # 1. Mapa de calor mejorado con degradado y descripción detallada
         archivo = carpeta_vis / f"mapa_calor_{indice}_{fecha}_{timestamp}.png"
-        fig, ax = plt.subplots(figsize=(10, 8))
-        im = ax.imshow(datos, cmap='RdYlGn', interpolation='nearest')
-        plt.colorbar(im, ax=ax, label=indice)
-        ax.set_title(f'{indice} - Mapa de Calor\n{fecha}')
-        ax.axis('off')
-        plt.tight_layout()
-        plt.savefig(archivo, dpi=150, bbox_inches='tight')
+        
+        fig = plt.figure(figsize=(14, 10))
+        gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.05)
+        
+        ax_mapa = fig.add_subplot(gs[0, 0])
+        ax_leyenda = fig.add_subplot(gs[0, 1])
+        
+        # Calcular rango de valores
+        datos_validos = datos[~np.isnan(datos)]
+        if len(datos_validos) > 0:
+            vmin = np.percentile(datos_validos, 2)
+            vmax = np.percentile(datos_validos, 98)
+        else:
+            vmin, vmax = -1, 1
+        
+        # Mostrar mapa con degradado
+        im = ax_mapa.imshow(datos, cmap=cmap_vegetacion, interpolation='bilinear',
+                           vmin=vmin, vmax=vmax)
+        ax_mapa.set_title(f'{indice} - Mapa Espacial\\n{fecha}', fontsize=14, fontweight='bold')
+        ax_mapa.axis('off')
+        
+        # Barra de color vertical
+        cbar_ax = fig.add_axes([0.52, 0.15, 0.02, 0.7])
+        cb = plt.colorbar(im, cax=cbar_ax)
+        cb.set_label(f'Valor {indice}', fontsize=10)
+        
+        # Panel de leyenda explicativa
+        ax_leyenda.axis('off')
+        
+        # Título de interpretación
+        ax_leyenda.text(0.1, 0.95, '¿QUÉ ESTOY VIENDO?', fontsize=12, fontweight='bold',
+                       transform=ax_leyenda.transAxes, va='top')
+        
+        ax_leyenda.text(0.1, 0.88, f'Mapa de {INDICES_INFO[indice]["nombre"]}', fontsize=10,
+                       transform=ax_leyenda.transAxes, va='top', style='italic')
+        
+        # Descripción del índice
+        ax_leyenda.text(0.1, 0.80, 'Este mapa muestra:', fontsize=10, fontweight='bold',
+                       transform=ax_leyenda.transAxes, va='top')
+        
+        desc_wrap = INDICES_INFO[indice]['descripcion'][:150]
+        ax_leyenda.text(0.1, 0.74, desc_wrap, fontsize=9, wrap=True,
+                       transform=ax_leyenda.transAxes, va='top', color='#444444')
+        
+        # Guía de colores
+        ax_leyenda.text(0.1, 0.60, 'GUÍA DE COLORES:', fontsize=11, fontweight='bold',
+                       transform=ax_leyenda.transAxes, va='top', color='#2E86AB')
+        
+        guia_colores = [
+            ('#006400', 'Verde oscuro', 'Vegetación muy saludable\\n(valores altos)'),
+            ('#32CD32', 'Verde claro', 'Vegetación densa'),
+            ('#FFEB3B', 'Amarillo', 'Vegetación moderada'),
+            ('#DAA520', 'Dorado', 'Vegetación dispersa'),
+            ('#8B4513', 'Marrón', 'Suelo o vegetación escasa\\n(valores bajos)')
+        ]
+        
+        y_pos = 0.52
+        for color, nombre, descripcion in guia_colores:
+            # Caja de color
+            rect = mpatches.FancyBboxPatch((0.1, y_pos - 0.025), 0.1, 0.035,
+                                           boxstyle="round,pad=0.01",
+                                           facecolor=color, edgecolor='#333333', linewidth=0.5,
+                                           transform=ax_leyenda.transAxes)
+            ax_leyenda.add_patch(rect)
+            
+            # Texto
+            ax_leyenda.text(0.25, y_pos, nombre, fontsize=9, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='center')
+            ax_leyenda.text(0.25, y_pos - 0.035, descripcion, fontsize=8, color='#666666',
+                           transform=ax_leyenda.transAxes, va='top')
+            y_pos -= 0.09
+        
+        # Estadísticas del área
+        if len(datos_validos) > 0:
+            ax_leyenda.text(0.1, 0.08, 'ESTADÍSTICAS:', fontsize=10, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top')
+            stats_text = f'Media: {np.mean(datos_validos):.3f}\\nMín: {np.min(datos_validos):.3f}\\nMáx: {np.max(datos_validos):.3f}'
+            ax_leyenda.text(0.1, 0.02, stats_text, fontsize=9, family='monospace',
+                           transform=ax_leyenda.transAxes, va='top')
+        
+        plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
         visualizaciones.append(archivo.name)
         
-        # 2. Hotspots y coldspots
+        # 2. Hotspots y coldspots mejorado
         if 'hotspots' in res:
             archivo = carpeta_vis / f"hotspots_{indice}_{fecha}_{timestamp}.png"
-            fig, ax = plt.subplots(figsize=(10, 8))
             
-            # Crear imagen RGB
+            fig = plt.figure(figsize=(14, 10))
+            gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.05)
+            
+            ax_mapa = fig.add_subplot(gs[0, 0])
+            ax_leyenda = fig.add_subplot(gs[0, 1])
+            
+            # Crear imagen RGB con fondo neutro
             img_rgb = np.zeros((*datos.shape, 3))
-            img_rgb[:, :, 1] = 0.5  # Fondo verde tenue
             
-            # Hotspots en rojo
+            # Fondo gris para áreas normales
+            mascara_normal = ~np.isnan(datos) & ~res['hotspots']['hotspots'] & ~res['hotspots']['coldspots']
+            img_rgb[mascara_normal, 0] = 0.7
+            img_rgb[mascara_normal, 1] = 0.7
+            img_rgb[mascara_normal, 2] = 0.7
+            
+            # Hotspots en rojo-naranja
             img_rgb[res['hotspots']['hotspots'], 0] = 1.0
-            img_rgb[res['hotspots']['hotspots'], 1] = 0.0
+            img_rgb[res['hotspots']['hotspots'], 1] = 0.3
+            img_rgb[res['hotspots']['hotspots'], 2] = 0.0
             
             # Coldspots en azul
-            img_rgb[res['hotspots']['coldspots'], 2] = 1.0
-            img_rgb[res['hotspots']['coldspots'], 1] = 0.0
+            img_rgb[res['hotspots']['coldspots'], 0] = 0.0
+            img_rgb[res['hotspots']['coldspots'], 1] = 0.4
+            img_rgb[res['hotspots']['coldspots'], 2] = 0.9
             
-            ax.imshow(img_rgb)
-            ax.set_title(f'{indice} - Hotspots y Coldspots\n{fecha}')
-            ax.axis('off')
+            ax_mapa.imshow(img_rgb, interpolation='nearest')
+            ax_mapa.set_title(f'{indice} - Zonas de Atención\\n{fecha}', fontsize=14, fontweight='bold')
+            ax_mapa.axis('off')
             
-            # Leyenda
-            red_patch = mpatches.Patch(color='red', label=f"Hotspots ({res['hotspots']['n_hotspots']} px)")
-            blue_patch = mpatches.Patch(color='blue', label=f"Coldspots ({res['hotspots']['n_coldspots']} px)")
-            ax.legend(handles=[red_patch, blue_patch], loc='upper right')
+            # Panel de leyenda
+            ax_leyenda.axis('off')
             
-            plt.tight_layout()
-            plt.savefig(archivo, dpi=150, bbox_inches='tight')
+            ax_leyenda.text(0.1, 0.95, '¿QUÉ ESTOY VIENDO?', fontsize=12, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            ax_leyenda.text(0.1, 0.85, 'Zonas que requieren atención:', fontsize=10,
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            # Leyenda de colores
+            leyenda_items = [
+                ('#FF4D00', 'HOTSPOTS (Naranja)', f'{res["hotspots"]["n_hotspots"]:,} píxeles\\n({res["hotspots"]["porcentaje_hotspots"]:.1f}% del área)', 
+                 'Zonas con valores MUY ALTOS.\\nPueden indicar vegetación\\nexcepcionalmente saludable.'),
+                ('#0066E6', 'COLDSPOTS (Azul)', f'{res["hotspots"]["n_coldspots"]:,} píxeles\\n({res["hotspots"]["porcentaje_coldspots"]:.1f}% del área)',
+                 'Zonas con valores MUY BAJOS.\\nPueden indicar estrés,\\nenfermedad o suelo desnudo.'),
+                ('#B3B3B3', 'Zona Normal (Gris)', '', 'Valores dentro del rango\\nesperable para el área.')
+            ]
+            
+            y_pos = 0.72
+            for color, nombre, stats, descripcion in leyenda_items:
+                rect = mpatches.FancyBboxPatch((0.1, y_pos - 0.02), 0.12, 0.04,
+                                               boxstyle="round,pad=0.01",
+                                               facecolor=color, edgecolor='#333333', linewidth=0.5,
+                                               transform=ax_leyenda.transAxes)
+                ax_leyenda.add_patch(rect)
+                
+                ax_leyenda.text(0.25, y_pos + 0.01, nombre, fontsize=10, fontweight='bold',
+                               transform=ax_leyenda.transAxes, va='center')
+                if stats:
+                    ax_leyenda.text(0.25, y_pos - 0.045, stats, fontsize=9, color='#333333',
+                                   transform=ax_leyenda.transAxes, va='top')
+                ax_leyenda.text(0.25, y_pos - 0.11, descripcion, fontsize=8, color='#666666',
+                               transform=ax_leyenda.transAxes, va='top')
+                y_pos -= 0.22
+            
+            plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white')
             plt.close()
             visualizaciones.append(archivo.name)
         
-        # 3. Clustering
+        # 3. Clustering mejorado
         if 'kmeans' in res:
             archivo = carpeta_vis / f"clustering_{indice}_{fecha}_{timestamp}.png"
-            fig, ax = plt.subplots(figsize=(10, 8))
-            im = ax.imshow(res['kmeans']['clusters_2d'], cmap='tab10', interpolation='nearest')
-            plt.colorbar(im, ax=ax, label='Cluster')
-            ax.set_title(f'{indice} - Clustering K-means\n{fecha}')
-            ax.axis('off')
-            plt.tight_layout()
-            plt.savefig(archivo, dpi=150, bbox_inches='tight')
+            
+            fig = plt.figure(figsize=(14, 10))
+            gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.05)
+            
+            ax_mapa = fig.add_subplot(gs[0, 0])
+            ax_leyenda = fig.add_subplot(gs[0, 1])
+            
+            # Paleta categórica clara
+            colores_cluster = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5']
+            from matplotlib.colors import ListedColormap
+            cmap_clusters = ListedColormap(colores_cluster)
+            
+            im = ax_mapa.imshow(res['kmeans']['clusters_2d'], cmap=cmap_clusters, 
+                               interpolation='nearest', vmin=0, vmax=4)
+            ax_mapa.set_title(f'{indice} - Segmentación por Zonas\\n{fecha}', fontsize=14, fontweight='bold')
+            ax_mapa.axis('off')
+            
+            # Panel de leyenda
+            ax_leyenda.axis('off')
+            
+            ax_leyenda.text(0.1, 0.95, '¿QUÉ ESTOY VIENDO?', fontsize=12, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            ax_leyenda.text(0.1, 0.85, 'Agrupación automática de zonas\\nsimilares (K-means clustering)', 
+                           fontsize=10, transform=ax_leyenda.transAxes, va='top')
+            
+            ax_leyenda.text(0.1, 0.72, 'ZONAS IDENTIFICADAS:', fontsize=10, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top', color='#2E86AB')
+            
+            y_pos = 0.65
+            for i, cluster_info in enumerate(res['kmeans']['stats_clusters'][:5]):
+                rect = mpatches.FancyBboxPatch((0.1, y_pos - 0.015), 0.1, 0.03,
+                                               boxstyle="round,pad=0.01",
+                                               facecolor=colores_cluster[i], edgecolor='#333333', linewidth=0.5,
+                                               transform=ax_leyenda.transAxes)
+                ax_leyenda.add_patch(rect)
+                
+                ax_leyenda.text(0.25, y_pos, f'Zona {i+1}', fontsize=10, fontweight='bold',
+                               transform=ax_leyenda.transAxes, va='center')
+                ax_leyenda.text(0.25, y_pos - 0.04, f'{cluster_info["porcentaje"]:.1f}% del área\\nValor medio: {cluster_info["media"]:.3f}',
+                               fontsize=8, color='#666666', transform=ax_leyenda.transAxes, va='top')
+                y_pos -= 0.12
+            
+            plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white')
             plt.close()
             visualizaciones.append(archivo.name)
     
-    # 4. Visualización de diferencias temporales
+    # 4. Visualización de diferencias temporales mejorada
     if resultado_diff and resultado_diff['diferencias']:
-        # Tomar primeras diferencias para visualizar
-        for i, diff in enumerate(resultado_diff['diferencias'][:3]):  # Máximo 3
+        # Paleta de degradado para diferencias (azul negativo - blanco neutro - rojo positivo)
+        colores_diff = ['#0D47A1', '#2196F3', '#BBDEFB', '#FFFFFF', '#FFCDD2', '#F44336', '#B71C1C']
+        cmap_diff = LinearSegmentedColormap.from_list('diferencias', colores_diff, N=256)
+        
+        for i, diff in enumerate(resultado_diff['diferencias'][:3]):
             archivo = carpeta_vis / f"diferencia_{indice}_{diff['fecha1']}_a_{diff['fecha2']}_{timestamp}.png"
             
-            fig, ax = plt.subplots(figsize=(10, 8))
-            im = ax.imshow(diff['diferencia'], cmap='RdBu_r', interpolation='nearest',
-                          vmin=-np.nanstd(diff['diferencia'])*2,
-                          vmax=np.nanstd(diff['diferencia'])*2)
-            plt.colorbar(im, ax=ax, label='Diferencia')
-            ax.set_title(f'{indice} - Diferencia Temporal\n{diff["fecha1"]} → {diff["fecha2"]}')
-            ax.axis('off')
-            plt.tight_layout()
-            plt.savefig(archivo, dpi=150, bbox_inches='tight')
+            fig = plt.figure(figsize=(14, 10))
+            gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.05)
+            
+            ax_mapa = fig.add_subplot(gs[0, 0])
+            ax_leyenda = fig.add_subplot(gs[0, 1])
+            
+            limite = np.nanstd(diff['diferencia']) * 2
+            
+            im = ax_mapa.imshow(diff['diferencia'], cmap=cmap_diff, interpolation='bilinear',
+                              vmin=-limite, vmax=limite)
+            ax_mapa.set_title(f'{indice} - Cambio Temporal\\n{diff["fecha1"]} → {diff["fecha2"]}', 
+                             fontsize=14, fontweight='bold')
+            ax_mapa.axis('off')
+            
+            # Barra de color
+            cbar_ax = fig.add_axes([0.52, 0.15, 0.02, 0.7])
+            cb = plt.colorbar(im, cax=cbar_ax)
+            cb.set_label('Diferencia', fontsize=10)
+            
+            # Panel de leyenda
+            ax_leyenda.axis('off')
+            
+            ax_leyenda.text(0.1, 0.95, '¿QUÉ ESTOY VIENDO?', fontsize=12, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            ax_leyenda.text(0.1, 0.85, 'Cambio entre dos fechas:', fontsize=10,
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            guia = [
+                ('#B71C1C', 'Rojo intenso', 'Aumento significativo'),
+                ('#F44336', 'Rojo', 'Aumento moderado'),
+                ('#FFFFFF', 'Blanco', 'Sin cambio'),
+                ('#2196F3', 'Azul', 'Disminución moderada'),
+                ('#0D47A1', 'Azul intenso', 'Disminución significativa')
+            ]
+            
+            y_pos = 0.70
+            for color, nombre, desc in guia:
+                rect = mpatches.FancyBboxPatch((0.1, y_pos - 0.015), 0.1, 0.03,
+                                               boxstyle="round,pad=0.01",
+                                               facecolor=color, edgecolor='#333333', linewidth=0.5,
+                                               transform=ax_leyenda.transAxes)
+                ax_leyenda.add_patch(rect)
+                ax_leyenda.text(0.25, y_pos, f'{nombre}: {desc}', fontsize=9,
+                               transform=ax_leyenda.transAxes, va='center')
+                y_pos -= 0.08
+            
+            # Estadísticas
+            ax_leyenda.text(0.1, 0.25, 'RESUMEN:', fontsize=10, fontweight='bold',
+                           transform=ax_leyenda.transAxes, va='top')
+            stats = f"Mejoró: {diff['porcentaje_aumento']:.1f}%\\nEstable: {diff['porcentaje_sin_cambio']:.1f}%\\nEmpeoró: {diff['porcentaje_disminucion']:.1f}%"
+            ax_leyenda.text(0.1, 0.18, stats, fontsize=9, family='monospace',
+                           transform=ax_leyenda.transAxes, va='top')
+            
+            plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white')
             plt.close()
             visualizaciones.append(archivo.name)
     
     print(f"✓ Generadas {len(visualizaciones)} visualizaciones")
-    for nombre in visualizaciones[:5]:  # Mostrar solo primeras 5
+    for nombre in visualizaciones[:5]:
         print(f"  • {nombre}")
     if len(visualizaciones) > 5:
         print(f"  ... y {len(visualizaciones)-5} más")
@@ -517,7 +959,7 @@ def menu_principal():
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         return
     
     while True:
@@ -549,7 +991,7 @@ if __name__ == "__main__":
     import os
     if os.environ.get('ANALISIS_AUTOMATICO') == '1':
         # Modo automático: analizar todos los índices con todas las fechas
-        print("\n🚀 Modo automático: analizando TODOS los índices con TODAS las fechas\n")
+        print("\nModo automático: analizando TODOS los índices con TODAS las fechas\n")
         indices_disponibles = obtener_indices_disponibles()
         for indice in indices_disponibles:
             analizar_espacial_indice(indice)

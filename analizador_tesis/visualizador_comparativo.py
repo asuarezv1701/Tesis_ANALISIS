@@ -240,7 +240,7 @@ def generar_dashboard_comparativo(datos_indices, carpeta_salida):
         archivo_barras
     )
     
-    print(f"\n✅ Dashboard comparativo generado en: {carpeta_salida}")
+    print(f"\nDashboard comparativo generado en: {carpeta_salida}")
     print(f"   • Gráficas separadas: {archivo_separados.name}")
     print(f"   • Gráficas juntas: {archivo_juntos.name}")
     print(f"   • Barras comparativas: {archivo_barras.name}")

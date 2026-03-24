@@ -17,7 +17,7 @@ Este script realiza análisis temporal completo:
 5. Detección de puntos de quiebre
 6. Visualizaciones temporales completas
 
-⭐ ANÁLISIS CLAVE PARA TESIS
+ANÁLISIS CLAVE PARA TESIS
 """
 
 import sys
@@ -82,7 +82,7 @@ def analizar_temporal_indice(indice):
     imagenes = listar_imagenes_indice(ruta_indice)
     
     if not imagenes:
-        print(f"\n⚠️  No se encontraron imágenes para {indice}")
+        print(f"\nADVERTENCIA: No se encontraron imágenes para {indice}")
         return None
     
     print(f"Encontradas {len(imagenes)} imágenes")
@@ -128,14 +128,14 @@ def analizar_temporal_indice(indice):
             print(f"✗ Error: {e}")
     
     if not datos_temporales:
-        print("\n❌ No se pudieron procesar imágenes")
+        print("\nERROR: No se pudieron procesar imágenes")
         return None
     
     # Crear DataFrame
     df = pd.DataFrame(datos_temporales)
     df = df.sort_values('fecha')
     
-    print(f"\n✅ Procesadas {len(df)} imágenes válidas")
+    print(f"\nProcesadas {len(df)} imágenes válidas")
     
     # Realizar análisis temporales
     resultados = realizar_analisis_temporal(df, indice)
@@ -167,7 +167,7 @@ def realizar_analisis_temporal(df, indice):
     }
     
     # 1. Tendencia lineal
-    print("\n1️⃣  Calculando tendencia lineal...")
+    print("\n[1] Calculando tendencia lineal...")
     tendencia = calcular_tendencia_lineal(df, 'fecha', 'media')
     if tendencia:
         print(f"   • Pendiente: {tendencia['pendiente']:.8f}")
@@ -177,10 +177,10 @@ def realizar_analisis_temporal(df, indice):
         print(f"   • Cambio total: {tendencia['cambio_absoluto']:.4f} ({tendencia['cambio_porcentual']:.2f}%)")
         resultados['tendencia_lineal'] = tendencia
     else:
-        print("   ⚠️  No se pudo calcular tendencia")
+        print("   ADVERTENCIA: No se pudo calcular tendencia")
     
     # 2. Test de Mann-Kendall
-    print("\n2️⃣  Test de Mann-Kendall...")
+    print("\n[2] Test de Mann-Kendall...")
     mk_test = test_mann_kendall(df['media'].values)
     if mk_test:
         print(f"   • Tau de Kendall: {mk_test['tau']:.4f}")
@@ -188,10 +188,10 @@ def realizar_analisis_temporal(df, indice):
         print(f"   • Resultado: {mk_test['resultado']}")
         resultados['mann_kendall'] = mk_test
     else:
-        print("   ⚠️  No se pudo ejecutar test")
+        print("   ADVERTENCIA: No se pudo ejecutar test")
     
     # 3. Velocidad de cambio
-    print("\n3️⃣  Calculando velocidad de cambio...")
+    print("\n[3] Calculando velocidad de cambio...")
     velocidad_df = calcular_velocidad_cambio(df, 'fecha', 'media')
     if velocidad_df is not None and len(velocidad_df) > 0:
         vel_promedio = velocidad_df['velocidad_por_dia'].mean()
@@ -202,10 +202,10 @@ def realizar_analisis_temporal(df, indice):
         print(f"   • Velocidad mínima: {vel_min:.6f} unidades/día")
         resultados['velocidad_cambio'] = velocidad_df
     else:
-        print("   ⚠️  No se pudo calcular velocidad")
+        print("   ADVERTENCIA: No se pudo calcular velocidad")
     
     # 4. Tasa de cambio mensual
-    print("\n4️⃣  Calculando tasa de cambio mensual...")
+    print("\n[4] Calculando tasa de cambio mensual...")
     tasa_mensual = calcular_tasa_cambio_periodo(df, 'fecha', 'media', 'M')
     if tasa_mensual is not None:
         print(f"   • Meses analizados: {len(tasa_mensual)}")
@@ -214,10 +214,10 @@ def realizar_analisis_temporal(df, indice):
             print(f"   • Cambio promedio mensual: {cambio_prom:.2f}%")
         resultados['tasa_mensual'] = tasa_mensual
     else:
-        print("   ⚠️  No se pudo calcular tasa mensual")
+        print("   ADVERTENCIA: No se pudo calcular tasa mensual")
     
     # 5. Descomposición estacional (si hay suficientes datos)
-    if len(df) >= 12:
+    if len(df) >= 4:
         print("\n5️⃣  Descomposición estacional...")
         try:
             decomp = descomponer_serie_temporal(df, 'fecha', 'media')
@@ -225,12 +225,16 @@ def realizar_analisis_temporal(df, indice):
                 print("   ✓ Serie descompuesta en: tendencia, estacional, residuo")
                 resultados['descomposicion'] = decomp
             else:
-                print("   ⚠️  No se pudo descomponer la serie")
+                print("   ADVERTENCIA: No se pudo descomponer la serie")
         except Exception as e:
-            print(f"   ⚠️  Error en descomposición: {e}")
+            print(f"   ADVERTENCIA: Error en descomposición: {e}")
+    else:
+        print("\n[5] Descomposición estacional...")
+        print(f"   ADVERTENCIA: Omitida: se requieren al menos 4 imágenes (actual: {len(df)}).")
+        print("   Recomendación: usar mínimo 5 imágenes para mayor estabilidad.")
     
     # 6. Comparación entre periodos
-    print("\n6️⃣  Comparando periodos...")
+    print("\n[6] Comparando periodos...")
     comparacion = comparar_periodos(df, 'fecha', 'media')
     if comparacion:
         print(f"   • Periodo 1: {comparacion['periodo1']['n']} imágenes, "
@@ -242,10 +246,10 @@ def realizar_analisis_temporal(df, indice):
         print(f"   • {comparacion['interpretacion']}")
         resultados['comparacion_periodos'] = comparacion
     else:
-        print("   ⚠️  No se pudo comparar periodos")
+        print("   ADVERTENCIA: No se pudo comparar periodos")
     
     # 7. Detección de punto de quiebre
-    if len(df) >= 10:
+    if len(df) >= 6:
         print("\n7️⃣  Detectando punto de quiebre...")
         quiebre = detectar_punto_quiebre(df, 'fecha', 'media')
         if quiebre:
@@ -254,17 +258,21 @@ def realizar_analisis_temporal(df, indice):
             print(f"   • R² total: {quiebre['r2_total']:.4f}")
             resultados['punto_quiebre'] = quiebre
         else:
-            print("   ⚠️  No se detectó punto de quiebre significativo")
+            print("   ADVERTENCIA: No se detectó punto de quiebre significativo")
+    else:
+        print("\n[7] Detectando punto de quiebre...")
+        print(f"   ADVERTENCIA: Omitido: se requieren al menos 6 imágenes (actual: {len(df)}).")
+        print("   Recomendación: usar mínimo 5 imágenes para análisis temporal más confiable.")
     
     # 8. Estadísticas mensuales
-    print("\n8️⃣  Calculando estadísticas mensuales...")
+    print("\n[8] Calculando estadísticas mensuales...")
     stats_mensuales = calcular_estadisticas_por_mes(df, 'fecha', 'media')
     if stats_mensuales is not None:
         print(f"   • Meses con datos: {len(stats_mensuales)}")
         resultados['estadisticas_mensuales'] = stats_mensuales
     
     print("\n" + "="*80)
-    print("✅ ANÁLISIS TEMPORAL COMPLETADO")
+    print("\nANÁLISIS TEMPORAL COMPLETADO")
     print("="*80)
     
     return resultados
@@ -274,7 +282,7 @@ def guardar_reportes_temporales(resultados, indice):
     """
     Guarda todos los reportes del análisis temporal.
     """
-    print("\n📊 Guardando reportes...")
+    print("\nGuardando reportes...")
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     carpeta_reportes = RUTA_REPORTES_TEMPORAL
@@ -328,7 +336,7 @@ def generar_visualizaciones_temporales(resultados, indice):
     """
     Genera todas las visualizaciones del análisis temporal.
     """
-    print("\n📈 Generando visualizaciones...")
+    print("\nGenerando visualizaciones...")
     
     from analizador_tesis import visualizador
     import matplotlib.pyplot as plt
@@ -380,7 +388,7 @@ def generar_visualizaciones_temporales(resultados, indice):
             print(f"  • {nombre}")
         
     except Exception as e:
-        print(f"⚠️  Error al generar visualizaciones: {e}")
+        print(f"ADVERTENCIA: Error al generar visualizaciones: {e}")
 
 
 # ============================================================================
@@ -490,34 +498,156 @@ def graficar_comparacion_periodos(df, comparacion, indice, archivo_salida):
 
 
 def graficar_descomposicion(decomp, indice, archivo_salida):
-    """Gráfica de descomposición estacional."""
+    """
+    Gráfica de descomposición estacional con layout de 2 columnas:
+    - Izquierda: Las 4 gráficas de descomposición
+    - Derecha: Panel de interpretación
+    """
     import matplotlib.pyplot as plt
+    from configuracion.config import INDICES_INFO
     
-    fig, axes = plt.subplots(4, 1, figsize=(12, 10))
+    # Figura más ancha para acomodar panel de interpretación
+    fig = plt.figure(figsize=(18, 14))
     
-    # Original
-    decomp['original'].plot(ax=axes[0], title='Serie Original')
-    axes[0].set_ylabel(indice)
+    # Layout: gráficas (75%) | interpretación (25%)
+    gs = fig.add_gridspec(4, 2, width_ratios=[3, 1], hspace=0.35, wspace=0.08)
     
-    # Tendencia
-    decomp['tendencia'].plot(ax=axes[1], title='Tendencia', color='red')
-    axes[1].set_ylabel(indice)
+    # Colores profesionales
+    colores = {
+        'original': '#2196F3',  # Azul
+        'tendencia': '#E53935',  # Rojo
+        'estacional': '#43A047',  # Verde
+        'residuo': '#FF9800'  # Naranja
+    }
     
-    # Estacional
-    decomp['estacional'].plot(ax=axes[2], title='Componente Estacional', color='green')
-    axes[2].set_ylabel('Estacional')
+    componentes = [
+        ('original', 'SERIE ORIGINAL', indice),
+        ('tendencia', 'TENDENCIA', indice),
+        ('estacional', 'COMPONENTE ESTACIONAL', 'Variación'),
+        ('residuo', 'RESIDUOS', 'Residuo')
+    ]
     
-    # Residuo
-    decomp['residuo'].plot(ax=axes[3], title='Residuos', color='orange')
-    axes[3].set_ylabel('Residuo')
-    axes[3].set_xlabel('Fecha')
+    # Dibujar las 4 gráficas en la columna izquierda
+    for idx, (key, titulo, ylabel) in enumerate(componentes):
+        ax = fig.add_subplot(gs[idx, 0])
+        
+        datos = decomp[key]
+        if datos is not None and not datos.isna().all():
+            ax.plot(datos.index, datos.values, color=colores[key], linewidth=1.5)
+            ax.fill_between(datos.index, datos.values, alpha=0.2, color=colores[key])
+        
+        ax.set_title(f'{titulo}', fontsize=11, fontweight='bold', 
+                    color=colores[key], loc='left', pad=8)
+        ax.set_ylabel(ylabel, fontsize=9)
+        ax.grid(True, alpha=0.3, linestyle='--')
+        ax.tick_params(axis='both', labelsize=8)
+        
+        if idx == 3:
+            ax.set_xlabel('Fecha', fontsize=9)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha='right')
+        else:
+            ax.set_xticklabels([])
     
-    for ax in axes:
-        ax.grid(True, alpha=0.3)
+    # Panel de interpretación en la columna derecha (ocupa las 4 filas)
+    ax_interp = fig.add_subplot(gs[:, 1])
+    ax_interp.axis('off')
     
-    plt.suptitle(f'{indice} - Descomposición de Serie Temporal', fontsize=14, fontweight='bold')
-    plt.tight_layout()
-    plt.savefig(archivo_salida, dpi=150, bbox_inches='tight')
+    # Título del panel
+    ax_interp.text(0.05, 0.98, '¿CÓMO INTERPRETAR?', fontsize=13, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#1565C0')
+    
+    # Calcular estadísticas para interpretación
+    tendencia_datos = decomp['tendencia']
+    estacional_datos = decomp['estacional']
+    
+    if tendencia_datos is not None and len(tendencia_datos) > 1:
+        cambio_tendencia = tendencia_datos.iloc[-1] - tendencia_datos.iloc[0]
+        if cambio_tendencia > 0.01:
+            direccion = "CRECIENTE ↑"
+            color_dir = '#2E7D32'
+            significado = "La vegetación está mejorando"
+        elif cambio_tendencia < -0.01:
+            direccion = "DECRECIENTE ↓"
+            color_dir = '#C62828'
+            significado = "La vegetación está deteriorándose"
+        else:
+            direccion = "ESTABLE →"
+            color_dir = '#F57C00'
+            significado = "Sin cambios significativos"
+    else:
+        direccion = "No determinada"
+        color_dir = '#666666'
+        significado = ""
+    
+    # Contenido de interpretación
+    y_pos = 0.88
+    
+    # 1. Serie Original
+    ax_interp.text(0.05, y_pos, '1. SERIE ORIGINAL', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#2196F3')
+    y_pos -= 0.03
+    ax_interp.text(0.05, y_pos, f'Valores de {indice} observados\nen cada fecha. Muestra la\nvariabilidad total de los datos.',
+                  fontsize=9, transform=ax_interp.transAxes, va='top', color='#444444')
+    y_pos -= 0.12
+    
+    # 2. Tendencia
+    ax_interp.text(0.05, y_pos, '2. TENDENCIA', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#E53935')
+    y_pos -= 0.03
+    ax_interp.text(0.05, y_pos, f'Dirección: {direccion}', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color=color_dir)
+    y_pos -= 0.03
+    ax_interp.text(0.05, y_pos, f'{significado}\na largo plazo.',
+                  fontsize=9, transform=ax_interp.transAxes, va='top', color='#444444')
+    y_pos -= 0.10
+    
+    # 3. Componente Estacional
+    ax_interp.text(0.05, y_pos, '3. ESTACIONALIDAD', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#43A047')
+    y_pos -= 0.03
+    if estacional_datos is not None:
+        amp_estacional = estacional_datos.max() - estacional_datos.min()
+        if amp_estacional > 0.05:
+            patron = "Patrón estacional FUERTE"
+        elif amp_estacional > 0.02:
+            patron = "Patrón estacional MODERADO"
+        else:
+            patron = "Patrón estacional DÉBIL"
+    else:
+        patron = "No determinado"
+    ax_interp.text(0.05, y_pos, f'{patron}\nCiclos que se repiten cada\naño (lluvias, sequía, etc.).',
+                  fontsize=9, transform=ax_interp.transAxes, va='top', color='#444444')
+    y_pos -= 0.12
+    
+    # 4. Residuos
+    ax_interp.text(0.05, y_pos, '4. RESIDUOS', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#FF9800')
+    y_pos -= 0.03
+    ax_interp.text(0.05, y_pos, 'Variación aleatoria no\nexplicada. Valores cercanos\na cero = buen modelo.',
+                  fontsize=9, transform=ax_interp.transAxes, va='top', color='#444444')
+    y_pos -= 0.12
+    
+    # Resumen
+    ax_interp.text(0.05, y_pos, '━━━━━━━━━━━━━━━━━', fontsize=8,
+                  transform=ax_interp.transAxes, va='top', color='#CCCCCC')
+    y_pos -= 0.03
+    ax_interp.text(0.05, y_pos, 'RESUMEN:', fontsize=10, fontweight='bold',
+                  transform=ax_interp.transAxes, va='top', color='#333333')
+    y_pos -= 0.04
+    
+    resumen = f'El índice {indice} muestra una\ntendencia {direccion.lower()}.'
+    if amp_estacional > 0.02 if estacional_datos is not None else False:
+        resumen += f'\n\nSe detecta estacionalidad,\nlo cual es normal para\nvegetación.'
+    
+    ax_interp.text(0.05, y_pos, resumen,
+                  fontsize=9, transform=ax_interp.transAxes, va='top', color='#444444',
+                  bbox=dict(boxstyle='round', facecolor='#F5F5F5', alpha=0.8))
+    
+    # Título principal
+    fig.suptitle(f'{indice} - DESCOMPOSICIÓN DE SERIE TEMPORAL\n{INDICES_INFO[indice]["nombre"]}', 
+                fontsize=14, fontweight='bold', y=0.98)
+    
+    plt.savefig(archivo_salida, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
 
 
@@ -539,7 +669,7 @@ def menu_principal():
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         return
     
     while True:
@@ -571,7 +701,7 @@ if __name__ == "__main__":
     import os
     if os.environ.get('ANALISIS_AUTOMATICO') == '1':
         # Modo automático: analizar todos los índices sin menú
-        print("\n🚀 Modo automático: analizando TODOS los índices\n")
+        print("\nModo automático: analizando TODOS los índices\n")
         indices_disponibles = obtener_indices_disponibles()
         for indice in indices_disponibles:
             analizar_temporal_indice(indice)

@@ -1,24 +1,24 @@
-# 🌿 Sistema de Análisis de Índices de Vegetación
+# Sistema de Análisis de Índices de Vegetación
 
-## ✅ Proyecto Configurado Exitosamente
+## Proyecto Configurado Exitosamente
 
 Tu proyecto en `Tesis_ANALISIS` está listo para analizar múltiples índices de vegetación.
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 Tesis_ANALISIS/
 ├── .gitignore                      # Archivos a ignorar en git
 ├── requirements.txt                # Dependencias del proyecto
 ├── README.md                       # Documentación principal
-├── listar_indices.py              # 🔍 Listar índices disponibles
-├── analizar_rangos_indices.py     # 📊 Analizar estadísticas
-└── filtrar_datos_indices.py       # 🔧 Filtrar datos por umbrales
+├── listar_indices.py              # Listar índices disponibles
+├── analizar_rangos_indices.py     # Analizar estadísticas
+├── filtrar_datos_indices.py       # Filtrar datos por umbrales
 ```
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
-### 1️⃣ Crear ambiente virtual (PRIMERA VEZ)
+### [1] Crear ambiente virtual (PRIMERA VEZ)
 
 ```powershell
 # Ir a la carpeta del proyecto
@@ -34,20 +34,20 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 2️⃣ Activar ambiente virtual (CADA VEZ QUE TRABAJES)
+### [2] Activar ambiente virtual (CADA VEZ QUE TRABAJES)
 
 ```powershell
 cd c:\Users\XMK0181\Documents\TT\Tesis_ANALISIS
 .\venv\Scripts\Activate.ps1
 ```
 
-### 3️⃣ Ver qué índices tienes disponibles
+### [3] Ver qué índices tienes disponibles
 
 ```powershell
 python listar_indices.py
 ```
 
-### 4️⃣ Analizar un índice
+### [4] Analizar un índice
 
 Edita `analizar_rangos_indices.py` línea 18:
 ```python
@@ -59,7 +59,7 @@ Ejecuta:
 python analizar_rangos_indices.py
 ```
 
-### 5️⃣ Filtrar datos
+### [5] Filtrar datos
 
 Edita `filtrar_datos_indices.py` líneas 19-23:
 ```python
@@ -73,7 +73,7 @@ Ejecuta:
 python filtrar_datos_indices.py
 ```
 
-## 🎯 Índices Soportados
+## Índices Soportados
 
 | Índice | Nombre Completo | Rango Típico | Uso Principal |
 |--------|----------------|--------------|---------------|
@@ -83,12 +83,12 @@ python filtrar_datos_indices.py
 | **RECI** | Red Edge Chlorophyll Index | 0 a 20+ | Nivel de clorofila |
 | **NDMI** | Normalized Difference Moisture Index | -1 a 1 | Contenido de humedad |
 
-## 📝 Notas Importantes
+## Notas Importantes
 
-- ✅ **Siempre activa el ambiente virtual** antes de trabajar
-- ✅ **Cada índice se procesa independientemente**
-- ✅ **Las nuevas librerías se agregarán a `requirements.txt`**
-- ✅ **Los datos filtrados se guardan en `datos_filtrados/<INDICE>/`**
+- **Siempre activa el ambiente virtual** antes de trabajar
+- **Cada índice se procesa independientemente**
+- **Las nuevas librerías se agregarán a `requirements.txt`**
+- **Los datos filtrados se guardan en `datos_filtrados/<INDICE>/`**
 
 ## 🔄 Flujo de Trabajo Recomendado
 
@@ -110,7 +110,7 @@ python filtrar_datos_indices.py
 8. Usar datos filtrados para análisis posterior
 ```
 
-## 📊 Archivos Generados
+## Archivos Generados
 
 - `estadisticas_<INDICE>.csv` - Estadísticas pre-filtrado
 - `reporte_filtrado_<INDICE>.csv` - Resumen del filtrado

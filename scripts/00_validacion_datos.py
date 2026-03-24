@@ -7,7 +7,7 @@ Este script:
 3. Genera reporte de calidad por cada imagen
 4. Identifica imágenes con problemas
 
-⭐ EJECUTAR ANTES DE CUALQUIER ANÁLISIS
+EJECUTAR ANTES DE CUALQUIER ANÁLISIS
 """
 
 import sys
@@ -52,14 +52,14 @@ def validar_configuracion_inicial():
     
     errores = []
     
-    print(f"\n📁 Ruta de descargas: {RUTA_DESCARGAS}")
+    print(f"\nRuta de descargas: {RUTA_DESCARGAS}")
     if RUTA_DESCARGAS.exists():
         print("   ✓ Encontrada")
     else:
         print("   ✗ NO ENCONTRADA")
         errores.append("Carpeta de descargas no existe")
     
-    print(f"\n📄 Ruta de shapefile: {RUTA_SHAPEFILE}")
+    print(f"\nRuta de shapefile: {RUTA_SHAPEFILE}")
     if RUTA_SHAPEFILE.exists():
         print("   ✓ Encontrado")
         
@@ -71,7 +71,7 @@ def validar_configuracion_inicial():
             print(f"   • Número de polígonos: {len(gdf)}")
             print(f"   • Área total: {gdf.geometry.area.sum():.2f} unidades²")
         except Exception as e:
-            print(f"   ⚠️  Error al leer shapefile: {e}")
+            print(f"   ADVERTENCIA: Error al leer shapefile: {e}")
             errores.append("Shapefile no se puede leer")
     else:
         print("   ✗ NO ENCONTRADO")
@@ -79,14 +79,14 @@ def validar_configuracion_inicial():
     
     if errores:
         print("\n" + "="*80)
-        print("❌ ERRORES ENCONTRADOS:")
+        print("ERRORES ENCONTRADOS:")
         for error in errores:
             print(f"   • {error}")
         print("\nPor favor, corrige estos errores antes de continuar.")
         return False
     
     print("\n" + "="*80)
-    print("✅ CONFIGURACIÓN VÁLIDA - LISTO PARA ANÁLISIS")
+    print("CONFIGURACIÓN VÁLIDA - LISTO PARA ANÁLISIS")
     print("="*80)
     return True
 
@@ -338,7 +338,7 @@ def menu_principal():
                 validar_indice(indices_disponibles[num])
         
         else:
-            print("\n❌ Opción no válida")
+            print("\nERROR: Opción no válida")
 
 
 # ============================================================================

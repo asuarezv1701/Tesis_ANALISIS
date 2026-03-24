@@ -65,17 +65,25 @@ def crear_portada(pdf, indice):
 
 
 def agregar_seccion(pdf, titulo):
-    """Agrega página de separación de sección."""
-    fig = plt.figure(figsize=(8.5, 11))
+    """Agrega página de separación de sección (simplificada)."""
+    fig, ax = plt.subplots(figsize=(8.5, 11))
     fig.patch.set_facecolor('#F5F5F5')
+    ax.set_facecolor('#F5F5F5')
     
-    plt.text(0.5, 0.5, titulo,
-             ha='center', va='center', fontsize=28, fontweight='bold',
-             color='#2E86AB')
+    # Título centrado
+    ax.text(0.5, 0.5, titulo,
+            ha='center', va='center', fontsize=28, fontweight='bold',
+            color='#2E86AB', transform=ax.transAxes)
     
-    plt.axis('off')
-    pdf.savefig(fig, bbox_inches='tight')
-    plt.close()
+    # Ocultar todos los ejes y bordes
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    ax.set_frame_on(False)
+    
+    plt.tight_layout()
+    pdf.savefig(fig, bbox_inches='tight', facecolor='#F5F5F5')
+    plt.close(fig)
 
 
 def agregar_resumen_ejecutivo(pdf, indice):
@@ -87,9 +95,8 @@ def agregar_resumen_ejecutivo(pdf, indice):
     plt.text(0.5, 0.95, 'RESUMEN EJECUTIVO',
              ha='center', va='top', fontsize=20, fontweight='bold')
     
-    # Buscar archivos de tendencias temporales
-    archivo_tendencias = RUTA_REPORTES / "03_temporal" / f"tendencias_{indice}_{datetime.now().strftime('%Y%m%d')}*.csv"
-    archivos = list(RUTA_REPORTES.glob(f"03_temporal/tendencias_{indice}_*.csv"))
+    # Buscar archivos de tendencia lineal (nombre correcto)
+    archivos = list(RUTA_REPORTES.glob(f"03_temporal/tendencia_lineal_{indice}_*.csv"))
     
     if archivos:
         df = pd.read_csv(archivos[-1])  # Más reciente
@@ -105,10 +112,17 @@ def agregar_resumen_ejecutivo(pdf, indice):
                  ha='left', va='top', fontsize=10)
         y_pos -= 0.05
         
-        if 'fecha_inicio' in df.columns:
-            plt.text(0.1, y_pos, f'Período: {df["fecha_inicio"].iloc[0]} a {df["fecha_fin"].iloc[0]}',
-                     ha='left', va='top', fontsize=10)
-            y_pos -= 0.08
+        # Buscar info de período en archivo de estadísticas exploratorias
+        archivos_exp = list(RUTA_REPORTES.glob(f"01_exploratorio/analisis_exploratorio_{indice}_*.csv"))
+        if archivos_exp:
+            df_exp = pd.read_csv(archivos_exp[-1])
+            if 'fecha' in df_exp.columns and len(df_exp) > 1:
+                plt.text(0.1, y_pos, f'Período: {df_exp["fecha"].iloc[0]} a {df_exp["fecha"].iloc[-1]}',
+                         ha='left', va='top', fontsize=10)
+                y_pos -= 0.05
+                plt.text(0.1, y_pos, f'Total de imágenes analizadas: {len(df_exp)}',
+                         ha='left', va='top', fontsize=10)
+                y_pos -= 0.08
         
         # Resultados de tendencia
         plt.text(0.1, y_pos, 'RESULTADOS DE TENDENCIA TEMPORAL:',
@@ -117,7 +131,7 @@ def agregar_resumen_ejecutivo(pdf, indice):
         
         if 'pendiente' in df.columns:
             pendiente = df['pendiente'].iloc[0]
-            r2 = df['r_cuadrado'].iloc[0]
+            r2 = df['r2'].iloc[0] if 'r2' in df.columns else df.get('r_cuadrado', [0]).iloc[0]
             p_valor = df['p_valor'].iloc[0]
             
             # Interpretación
@@ -139,15 +153,27 @@ def agregar_resumen_ejecutivo(pdf, indice):
                      ha='left', va='top', fontsize=11, color=color_tend, fontweight='bold')
             y_pos -= 0.04
             
-            plt.text(0.1, y_pos, f'• Pendiente: {pendiente:.6f} unidades/día',
+            # Formatear pendiente de forma legible
+            if abs(pendiente) < 0.0001:
+                pendiente_str = f'{pendiente:.2e}'  # Notación científica
+            else:
+                pendiente_str = f'{pendiente:.4f}'
+            
+            plt.text(0.1, y_pos, f'• Pendiente: {pendiente_str} unidades/día',
                      ha='left', va='top', fontsize=10)
             y_pos -= 0.04
             
-            plt.text(0.1, y_pos, f'• R² = {r2:.3f} (Fuerza de tendencia)',
+            plt.text(0.1, y_pos, f'• R² = {r2:.2f} ({r2*100:.0f}% de varianza explicada)',
                      ha='left', va='top', fontsize=10)
             y_pos -= 0.04
             
-            plt.text(0.1, y_pos, f'• Significancia: {significancia} (p={p_valor:.4f})',
+            # Formatear p-valor
+            if p_valor < 0.001:
+                p_valor_str = '< 0.001'
+            else:
+                p_valor_str = f'{p_valor:.3f}'
+            
+            plt.text(0.1, y_pos, f'• Significancia: {significancia} (p = {p_valor_str})',
                      ha='left', va='top', fontsize=10, color=color_sig, fontweight='bold')
             y_pos -= 0.06
         
@@ -255,26 +281,47 @@ QUÉ BUSCAR:
         imagenes = sorted(carpeta_tipo.glob('*.png'))
         
         for img_path in imagenes[:10]:  # Máximo 10 imágenes por tipo
-            fig = plt.figure(figsize=(8.5, 11))
+            nombre_lower = img_path.stem.lower()
+            
+            # Para descomposición estacional: mostrar imagen completa sin texto adicional
+            if 'descomposicion' in nombre_lower:
+                fig = plt.figure(figsize=(8.5, 11))
+                fig.patch.set_facecolor('white')
+                ax = fig.add_axes([0.02, 0.02, 0.96, 0.96])
+                try:
+                    img = plt.imread(img_path)
+                    ax.imshow(img)
+                except Exception as e:
+                    ax.text(0.5, 0.5, f'Error al cargar imagen', ha='center', va='center')
+                ax.axis('off')
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close()
+                continue
+            
+            # Para otras imágenes: layout con descripción
+            fig, ax = plt.subplots(figsize=(8.5, 11))
             fig.patch.set_facecolor('white')
+            ax.set_facecolor('white')
             
             # Título con nombre del archivo
             titulo = img_path.stem.replace('_', ' ').title()
-            plt.text(0.5, 0.97, titulo,
-                     ha='center', va='top', fontsize=14, fontweight='bold',
-                     transform=fig.transFigure)
+            fig.text(0.5, 0.97, titulo,
+                     ha='center', va='top', fontsize=14, fontweight='bold')
             
             # Cargar y mostrar imagen (ajustada para dejar espacio a descripción)
-            img = plt.imread(img_path)
-            ax = plt.axes([0.05, 0.35, 0.9, 0.6])
-            ax.imshow(img)
+            try:
+                img = plt.imread(img_path)
+                # Reposicionar el subplot para la imagen
+                ax.set_position([0.05, 0.35, 0.9, 0.58])
+                ax.imshow(img)
+            except Exception as e:
+                ax.text(0.5, 0.5, f'Error al cargar imagen', ha='center', va='center')
+            
             ax.axis('off')
+            ax.set_frame_on(False)
             
             # Agregar descripción detallada según el tipo de gráfica
             descripcion = "QUÉ MUESTRA ESTA GRÁFICA:\n\n"
-            
-            # Identificar tipo de gráfica por nombre de archivo
-            nombre_lower = img_path.stem.lower()
             if 'serie' in nombre_lower or 'temporal' in nombre_lower:
                 descripcion += descripciones['serie_temporal']
             elif 'histograma' in nombre_lower or 'distribucion' in nombre_lower:
@@ -303,8 +350,217 @@ características importantes de la vegetación en el área de estudio."""
             plt.close()
 
 
+def exportar_resultados_excel(indice):
+    """
+    Exporta todos los resultados numéricos a archivos Excel y CSV.
+    Más accesibles y fáciles de interpretar que tablas en PDF.
+    """
+    print(f"  • Exportando resultados numéricos a Excel/CSV...")
+    
+    # Crear carpeta para exportaciones
+    carpeta_export = RUTA_REPORTES_PDF / "datos_exportados"
+    carpeta_export.mkdir(exist_ok=True, parents=True)
+    
+    archivos_creados = []
+    
+    # Buscar CSVs de resultados
+    carpetas_reportes = [
+        ('01_exploratorio', 'Análisis Exploratorio'),
+        ('02_espacial', 'Análisis Espacial'),
+        ('03_temporal', 'Análisis Temporal'),
+        ('05_predicciones', 'Predicciones')
+    ]
+    
+    # Intentar crear archivo Excel consolidado
+    try:
+        archivo_excel = carpeta_export / f"Resultados_Completos_{indice}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        
+        with pd.ExcelWriter(archivo_excel, engine='openpyxl') as writer:
+            hojas_creadas = 0
+            
+            for carpeta_nombre, descripcion in carpetas_reportes:
+                ruta_carpeta = RUTA_REPORTES / carpeta_nombre
+                
+                if not ruta_carpeta.exists():
+                    continue
+                
+                # Buscar CSVs de este índice (tomar el más reciente)
+                csvs = sorted(ruta_carpeta.glob(f'*{indice}*.csv'), reverse=True)
+                
+                if not csvs:
+                    continue
+                
+                # Tomar solo el más reciente de cada tipo
+                tipos_procesados = set()
+                
+                for csv_path in csvs:
+                    # Extraer tipo de análisis del nombre
+                    nombre_base = csv_path.stem.split(f'_{indice}')[0]
+                    
+                    if nombre_base in tipos_procesados:
+                        continue
+                    
+                    tipos_procesados.add(nombre_base)
+                    
+                    try:
+                        df = pd.read_csv(csv_path)
+                        
+                        if len(df) == 0:
+                            continue
+                        
+                        # Formatear números para mejor legibilidad
+                        for col in df.columns:
+                            if df[col].dtype in ['float64', 'float32']:
+                                df[col] = df[col].round(4)
+                        
+                        # Nombre de hoja (máximo 31 caracteres para Excel)
+                        nombre_hoja = nombre_base[:28].replace('_', ' ').title()
+                        
+                        # Evitar nombres duplicados
+                        if nombre_hoja in [sheet.title for sheet in writer.book.worksheets if hasattr(writer, 'book')]:
+                            nombre_hoja = f"{nombre_hoja[:25]}_{hojas_creadas}"
+                        
+                        df.to_excel(writer, sheet_name=nombre_hoja, index=False)
+                        hojas_creadas += 1
+                        
+                        if hojas_creadas >= 10:  # Máximo 10 hojas
+                            break
+                            
+                    except Exception as e:
+                        continue
+                
+                if hojas_creadas >= 10:
+                    break
+            
+            if hojas_creadas > 0:
+                archivos_creados.append(archivo_excel)
+                print(f"    ✓ Excel creado: {archivo_excel.name} ({hojas_creadas} hojas)")
+    
+    except Exception as e:
+        print(f"    ⚠ No se pudo crear Excel (openpyxl no disponible): {e}")
+        print("    → Exportando a CSV individuales...")
+    
+    # También crear CSVs individuales con nombres descriptivos
+    for carpeta_nombre, descripcion in carpetas_reportes:
+        ruta_carpeta = RUTA_REPORTES / carpeta_nombre
+        
+        if not ruta_carpeta.exists():
+            continue
+        
+        csvs = sorted(ruta_carpeta.glob(f'*{indice}*.csv'), reverse=True)
+        
+        if csvs:
+            csv_mas_reciente = csvs[0]
+            try:
+                df = pd.read_csv(csv_mas_reciente)
+                if len(df) > 0:
+                    # Guardar copia con nombre más claro
+                    nombre_nuevo = f"{indice}_{descripcion.replace(' ', '_')}.csv"
+                    archivo_csv = carpeta_export / nombre_nuevo
+                    df.to_csv(archivo_csv, index=False)
+                    archivos_creados.append(archivo_csv)
+            except Exception:
+                continue
+    
+    return archivos_creados
+
+
 def agregar_tabla_resultados(pdf, indice):
-    """Agrega tablas con resultados numéricos mejoradas."""
+    """
+    Agrega página informativa sobre los resultados numéricos exportados.
+    Los datos detallados se exportan a Excel/CSV para mejor accesibilidad.
+    """
+    agregar_seccion(pdf, 'RESULTADOS NUMÉRICOS')
+    
+    # Exportar resultados a Excel/CSV
+    archivos_exportados = exportar_resultados_excel(indice)
+    
+    # Crear página informativa en el PDF
+    fig = plt.figure(figsize=(8.5, 11))
+    fig.patch.set_facecolor('white')
+    
+    y_pos = 0.92
+    
+    # Título
+    plt.text(0.5, y_pos, 'DATOS NUMÉRICOS EXPORTADOS',
+             ha='center', va='top', fontsize=18, fontweight='bold')
+    y_pos -= 0.08
+    
+    # Explicación
+    explicacion = """Los resultados numéricos detallados se han exportado a archivos 
+Excel y CSV para facilitar su análisis y uso en otras aplicaciones.
+
+Estos archivos contienen:"""
+    
+    plt.text(0.1, y_pos, explicacion, ha='left', va='top', fontsize=11,
+             wrap=True, linespacing=1.5)
+    y_pos -= 0.15
+    
+    # Lista de contenidos
+    contenidos = [
+        ("📊 Análisis Exploratorio", "Estadísticas descriptivas por fecha"),
+        ("🗺️ Análisis Espacial", "Hotspots, clustering, autocorrelación"),
+        ("📈 Análisis Temporal", "Tendencias, velocidad de cambio, estacionalidad"),
+        ("🔮 Predicciones", "Proyecciones futuras basadas en patrones históricos")
+    ]
+    
+    for titulo, desc in contenidos:
+        plt.text(0.12, y_pos, titulo, ha='left', va='top', fontsize=12, fontweight='bold')
+        y_pos -= 0.03
+        plt.text(0.15, y_pos, desc, ha='left', va='top', fontsize=10, color='#555555')
+        y_pos -= 0.05
+    
+    y_pos -= 0.05
+    
+    # Ubicación de archivos
+    plt.text(0.1, y_pos, 'UBICACIÓN DE ARCHIVOS:', ha='left', va='top',
+             fontsize=12, fontweight='bold', color='#2E86AB')
+    y_pos -= 0.05
+    
+    ruta_export = RUTA_REPORTES_PDF / "datos_exportados"
+    plt.text(0.12, y_pos, str(ruta_export), ha='left', va='top',
+             fontsize=9, family='monospace', color='#333333',
+             bbox=dict(boxstyle='round', facecolor='#F0F0F0', alpha=0.8))
+    y_pos -= 0.08
+    
+    # Lista de archivos creados
+    if archivos_exportados:
+        plt.text(0.1, y_pos, 'Archivos generados:', ha='left', va='top',
+                 fontsize=11, fontweight='bold')
+        y_pos -= 0.04
+        
+        for archivo in archivos_exportados[:6]:  # Máximo 6
+            nombre = archivo.name if hasattr(archivo, 'name') else str(archivo)
+            plt.text(0.12, y_pos, f"• {nombre}", ha='left', va='top', fontsize=9)
+            y_pos -= 0.03
+    
+    y_pos -= 0.05
+    
+    # Nota sobre cómo usar
+    nota = """CÓMO USAR ESTOS ARCHIVOS:
+
+• Excel (.xlsx): Abrir con Microsoft Excel, Google Sheets o LibreOffice Calc
+• CSV (.csv): Importar en cualquier programa de análisis de datos
+
+Los archivos CSV pueden abrirse directamente en Excel haciendo doble clic."""
+    
+    plt.text(0.1, y_pos, nota, ha='left', va='top', fontsize=10,
+             bbox=dict(boxstyle='round', facecolor='#E8F5E9', alpha=0.8, pad=0.5),
+             linespacing=1.4)
+    
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.axis('off')
+    
+    pdf.savefig(fig, bbox_inches='tight')
+    plt.close()
+    
+    # Ya no agregar tablas embebidas - los datos están en Excel/CSV
+    return
+
+
+def _agregar_tabla_resultados_legacy(pdf, indice):
+    """Versión anterior - Ya no se usa, los datos se exportan a Excel."""
     agregar_seccion(pdf, 'RESULTADOS NUMÉRICOS')
     
     # Buscar CSVs de resultados
@@ -364,17 +620,45 @@ def agregar_tabla_resultados(pdf, indice):
                              fontsize=9, style='italic', color='gray',
                              transform=fig.transFigure)
                 
-                # Convertir DataFrame a texto formateado
+                # Convertir DataFrame a texto formateado (mejor legibilidad)
                 cell_text = []
                 for idx, row in df_mostrar.iterrows():
                     row_text = []
-                    for val in row:
+                    for col_name, val in zip(df_mostrar.columns, row):
                         if pd.isna(val):
                             row_text.append('-')
                         elif isinstance(val, (int, np.integer)):
                             row_text.append(f'{val:,}')
                         elif isinstance(val, (float, np.floating)):
-                            row_text.append(f'{val:.4f}')
+                            # Formateo inteligente según el valor y tipo de columna
+                            col_lower = col_name.lower()
+                            abs_val = abs(val)
+                            
+                            # Porcentajes
+                            if 'porcent' in col_lower or '%' in col_lower or 'cv' in col_lower:
+                                row_text.append(f'{val:.1f}%')
+                            # P-valores
+                            elif 'p_valor' in col_lower or 'p-value' in col_lower:
+                                if val < 0.001:
+                                    row_text.append('< 0.001')
+                                else:
+                                    row_text.append(f'{val:.3f}')
+                            # R² o correlaciones
+                            elif 'r_cuadrado' in col_lower or 'r2' in col_lower or 'correlacion' in col_lower:
+                                row_text.append(f'{val:.3f}')
+                            # Valores muy pequeños (usa notación científica)
+                            elif abs_val < 0.0001 and abs_val > 0:
+                                row_text.append(f'{val:.2e}')
+                            # Valores índice típicos (-1 a 1)
+                            elif -1 <= val <= 1:
+                                row_text.append(f'{val:.3f}')
+                            # Valores mayores
+                            elif abs_val >= 1000:
+                                row_text.append(f'{val:,.0f}')
+                            elif abs_val >= 100:
+                                row_text.append(f'{val:.1f}')
+                            else:
+                                row_text.append(f'{val:.2f}')
                         else:
                             # Acortar texto si es muy largo
                             val_str = str(val)
@@ -423,7 +707,7 @@ def agregar_tabla_resultados(pdf, indice):
                 plt.close()
                 
             except Exception as e:
-                print(f"⚠️  Error al procesar {csv_path.name}: {e}")
+                print(f"ADVERTENCIA: Error al procesar {csv_path.name}: {e}")
                 continue
 
 
@@ -441,7 +725,7 @@ def generar_reporte_pdf(indice):
     # Nombre del archivo
     archivo_pdf = RUTA_REPORTES_PDF / f"Reporte_{indice}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     
-    print(f"\n📄 Creando PDF: {archivo_pdf.name}")
+    print(f"\nCreando PDF: {archivo_pdf.name}")
     
     # Crear PDF
     with PdfPages(archivo_pdf) as pdf:
@@ -469,7 +753,7 @@ def generar_reporte_pdf(indice):
         d['Keywords'] = f'{indice}, vegetación, análisis temporal, análisis espacial'
         d['CreationDate'] = datetime.now()
     
-    print(f"\n✅ PDF generado exitosamente")
+    print(f"\nPDF generado exitosamente")
     print(f"   Ubicación: {archivo_pdf}")
     print(f"   Tamaño: {archivo_pdf.stat().st_size / 1024:.1f} KB")
     
@@ -496,7 +780,7 @@ if __name__ == "__main__":
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         sys.exit(1)
     
     # Detectar modo automático
@@ -505,13 +789,13 @@ if __name__ == "__main__":
     
     if modo_automatico:
         # Generar PDFs para todos
-        print("\n🚀 Modo automático: generando PDFs para todos los índices\n")
+        print("\nModo automático: generando PDFs para todos los índices\n")
         
         for indice in indices_disponibles:
             try:
                 generar_reporte_pdf(indice)
             except Exception as e:
-                print(f"⚠️  Error al generar PDF para {indice}: {e}")
+                print(f"ADVERTENCIA: Error al generar PDF para {indice}: {e}")
     
     else:
         # Modo interactivo
@@ -549,4 +833,4 @@ if __name__ == "__main__":
                         print(f"⚠️  Error: {e}")
     
     print("\n✓ Proceso completado")
-    print(f"\n📁 Los PDFs están en: {RUTA_REPORTES_PDF.absolute()}")
+    print(f"\nLos PDFs están en: {RUTA_REPORTES_PDF.absolute()}")

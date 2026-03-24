@@ -71,7 +71,7 @@ def ejecutar_script(ruta_script):
         )
         return resultado.returncode == 0
     except Exception as e:
-        print(f"\n❌ Error al ejecutar script: {e}")
+        print(f"\nERROR: Error al ejecutar script: {e}")
         return False
 
 
@@ -195,7 +195,7 @@ def menu_principal():
     indices = mostrar_resumen_datos()
     
     if not indices:
-        print("\n❌ No hay datos para analizar. Ejecuta primero el descargador.")
+        print("\nERROR: No hay datos para analizar. Ejecuta primero el descargador.")
         return
     
     scripts_dir = Path(__file__).parent / "scripts"
@@ -311,7 +311,7 @@ def mostrar_ayuda():
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 1️⃣  VALIDACIÓN DE DATOS                                                 │
+│ [1] VALIDACIÓN DE DATOS                                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Verifica que el shapefile elimine correctamente píxeles fuera del     │
@@ -327,7 +327,7 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 2️⃣  ANÁLISIS EXPLORATORIO                                               │
+│ [2] ANÁLISIS EXPLORATORIO                                               │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Calcula estadísticas básicas de cada imagen (media, mediana, desv.)  │
@@ -352,7 +352,7 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 3️⃣  ANÁLISIS TEMPORAL ⭐ MÁS IMPORTANTE PARA TESIS                      │
+│ [3] ANÁLISIS TEMPORAL - MÁS IMPORTANTE PARA TESIS                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Analiza cómo cambia el índice a lo largo del tiempo                  │
@@ -396,7 +396,7 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 4️⃣  ANÁLISIS ESPACIAL                                                   │
+│ [4] ANÁLISIS ESPACIAL                                                   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Identifica DÓNDE están las zonas con valores altos/bajos            │
@@ -450,7 +450,7 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 6️⃣  PREDICCIONES FUTURAS (DEEP LEARNING) ⭐ NUEVO                      │
+│ [6] PREDICCIONES FUTURAS (DEEP LEARNING) - NUEVO                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Usa redes neuronales para PREDECIR cómo evolucionará la vegetación  │
@@ -530,35 +530,35 @@ def mostrar_ayuda():
 
 Supongamos que analizas MSAVI y obtienes:
 
-📈 ANÁLISIS TEMPORAL:
+ANÁLISIS TEMPORAL:
    • Pendiente: -0.00155079
    • R²: 0.2002
    • P-valor: 0.047934
    • Cambio total: -32.70%
    
-   ✅ INTERPRETACIÓN:
+   INTERPRETACIÓN:
    "El índice MSAVI muestra una tendencia DECRECIENTE significativa (p<0.05).
    La vegetación está perdiendo 0.00155 unidades por día, lo que representa
    una pérdida del 32.7% en el período analizado. La R² de 0.20 indica que
    la tendencia es moderada, sugiriendo que hay variabilidad pero la 
    dirección del cambio es clara."
 
-🗺️  ANÁLISIS ESPACIAL:
+ANÁLISIS ESPACIAL:
    • Hotspots: 8.5% del área
    • Coldspots: 12.3% del área
    • I de Moran: 0.65 (p<0.001)
    
-   ✅ INTERPRETACIÓN:
+   INTERPRETACIÓN:
    "Se identificaron zonas críticas (coldspots) que representan el 12.3%
    del área total. El índice de Moran positivo (0.65) indica que existe
    agrupamiento espacial significativo, es decir, las zonas problemáticas
    tienden a estar juntas geográficamente."
 
-🎯 SEGMENTACIÓN:
+SEGMENTACIÓN:
    • Zona 0: Tendencia -0.008, R²=0.75 (peor zona)
    • Zona 4: Tendencia +0.002, R²=0.45 (mejor zona)
    
-   ✅ INTERPRETACIÓN:
+   INTERPRETACIÓN:
    "Existe heterogeneidad espacial significativa. La Zona 0 muestra un
    deterioro acelerado (-0.008/día, R²=0.75) mientras que la Zona 4
    presenta ligera recuperación. Esto sugiere que diferentes áreas
@@ -572,7 +572,7 @@ Para tu tesis, te recomiendo este orden:
 
 1. Validación de datos (1 vez, al inicio)
 2. Análisis exploratorio (conocer tus datos)
-3. Análisis temporal (⭐ MÁS IMPORTANTE - tendencias)
+3. Análisis temporal (MÁS IMPORTANTE - tendencias)
 4. Análisis espacial (identificar dónde están los problemas)
 5. Segmentación de zonas (análisis detallado por región)
 
@@ -585,8 +585,8 @@ if __name__ == "__main__":
     try:
         menu_principal()
     except KeyboardInterrupt:
-        print("\n\n👋 Sistema interrumpido por el usuario")
+        print("\n\nSistema interrumpido por el usuario")
     except Exception as e:
-        print(f"\n❌ Error inesperado: {e}")
+        print(f"\nERROR: Error inesperado: {e}")
         import traceback
         traceback.print_exc()

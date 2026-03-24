@@ -1,8 +1,8 @@
-# 🌿 Proyecto de Análisis de Índices de Vegetación - TESIS
+# Proyecto de Análisis de Índices de Vegetación - TESIS
 
 Sistema modular y profesional para análisis espacial y temporal de datos satelitales de áreas verdes.
 
-## 🎯 Descripción del Proyecto
+## Descripción del Proyecto
 
 Este sistema analiza datos de índices de vegetación obtenidos de imágenes satelitales Sentinel-2, con enfoque en:
 - **Análisis espacial**: Mapas de calor, clustering, detección de zonas críticas
@@ -10,7 +10,7 @@ Este sistema analiza datos de índices de vegetación obtenidos de imágenes sat
 - **Análisis estadístico**: Correlaciones entre índices, detección de anomalías
 - **Segmentación**: Identificación de heterogeneidad en el cultivo
 
-## 📊 Índices Soportados
+## Índices Soportados
 
 | Índice | Nombre Completo | Rango | Aplicación |
 |--------|----------------|-------|------------|
@@ -24,16 +24,16 @@ Este sistema analiza datos de índices de vegetación obtenidos de imágenes sat
 
 ```
 Tesis_ANALISIS/
-├── analizador_tesis/           # 📦 MÓDULO CORE (Funciones reutilizables)
+├── analizador_tesis/           # MÓDULO CORE (Funciones reutilizables)
 │   ├── __init__.py
-│   ├── procesador_base.py      # ⭐ Carga + Enmascaramiento
+│   ├── procesador_base.py      # Carga + Enmascaramiento
 │   ├── estadisticas.py         # Cálculos estadísticos avanzados
 │   ├── temporal.py             # Análisis de series temporales
 │   ├── espacial.py             # Análisis espacial
 │   └── visualizador.py         # Gráficas reutilizables
 │
-├── scripts/                    # 🔧 SCRIPTS EJECUTABLES
-│   ├── 00_validacion_datos.py  # ✅ Validar shapefile + datos
+├── scripts/                    # SCRIPTS EJECUTABLES
+│   ├── 00_validacion_datos.py  # Validar shapefile + datos
 │   ├── 01_analisis_exploratorio.py
 │   ├── 02_analisis_espacial.py
 │   ├── 03_analisis_temporal.py
@@ -45,15 +45,15 @@ Tesis_ANALISIS/
 ├── configuracion/
 │   └── config.py               # Configuración centralizada
 │
-├── reportes/                   # 📊 CSV generados
-├── visualizaciones/            # 📈 Gráficas PNG
-├── datos_procesados/           # 💾 Datos intermedios
-└── reportes_pdf/               # 📄 Informes finales
+├── reportes/                   # CSV generados
+├── visualizaciones/            # Gráficas PNG
+├── datos_procesados/           # Datos intermedios
+└── reportes_pdf/               # Informes finales
 ```
 
-## 📦 Instalación y Configuración
+## Instalación y Configuración
 
-### 1️⃣ Crear y activar ambiente virtual
+### [1] Crear y activar ambiente virtual
 
 ```powershell
 # Navegar a la carpeta del proyecto
@@ -69,22 +69,22 @@ python -m venv venv
 .\venv\Scripts\activate.bat
 ```
 
-### 2️⃣ Instalar dependencias
+### [2] Instalar dependencias
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Verificar configuración
+### [3] Verificar configuración
 
 ```powershell
 # Validar que las rutas sean correctas
 python -m configuracion.config
 ```
 
-## 🚀 Guía de Uso Rápida
+## Guía de Uso Rápida
 
-### ⭐ PASO 0: Validación de Datos (OBLIGATORIO)
+### PASO 0: Validación de Datos (OBLIGATORIO)
 
 **Siempre ejecuta esto PRIMERO** para verificar el enmascaramiento del shapefile:
 
@@ -94,26 +94,26 @@ python 00_validacion_datos.py
 ```
 
 Este script:
-- ✅ Valida que el shapefile funcione correctamente
-- ✅ Muestra cuántos píxeles están dentro del polígono
-- ✅ Genera reportes de calidad por imagen
-- ✅ Crea visualizaciones de ejemplo
+- Valida que el shapefile funcione correctamente
+- Muestra cuántos píxeles están dentro del polígono
+- Genera reportes de calidad por imagen
+- Crea visualizaciones de ejemplo
 
 **Ejemplo de salida:**
 ```
 VALIDACIÓN DE CONFIGURACIÓN INICIAL
 ================================================================================
 
-📁 Ruta de descargas: D:\TT\Tesis_DESCARGAS\descargas\UPIITA_contours_25nov.2025
+Ruta de descargas: D:\TT\Tesis_DESCARGAS\descargas\UPIITA_contours_25nov.2025
    ✓ Encontrada
 
-📄 Ruta de shapefile: D:\TT\Tesis_DESCARGAS\shapefiles\...\UPIITA_contours_25Nov2025.shp
+Ruta de shapefile: D:\TT\Tesis_DESCARGAS\shapefiles\...\UPIITA_contours_25Nov2025.shp
    ✓ Encontrado
    • CRS: EPSG:4326
    • Número de polígonos: 1
    • Área total: 0.0001 unidades²
 
-✅ CONFIGURACIÓN VÁLIDA - LISTO PARA ANÁLISIS
+CONFIGURACIÓN VÁLIDA - LISTO PARA ANÁLISIS
 ```
 
 ### Flujo de Trabajo Completo
@@ -129,14 +129,14 @@ VALIDACIÓN DE CONFIGURACIÓN INICIAL
 
 ## 🔑 Características Clave
 
-### ⭐ Enmascaramiento Automático
+### Enmascaramiento Automático
 
 Todos los análisis utilizan **enmascaramiento con shapefile** para:
-- ✅ Eliminar píxeles fuera del área de interés
-- ✅ Evitar contaminación por suelo desnudo, construcciones, etc.
-- ✅ Trabajar solo con píxeles dentro del polígono definido
+- Eliminar píxeles fuera del área de interés
+- Evitar contaminación por suelo desnudo, construcciones, etc.
+- Trabajar solo con píxeles dentro del polígono definido
 
-### 📊 Estadísticas Avanzadas
+### Estadísticas Avanzadas
 
 - **Básicas**: Media, mediana, desviación estándar, percentiles
 - **Heterogeneidad**: Coeficiente de Variación (CV)
@@ -144,7 +144,7 @@ Todos los análisis utilizan **enmascaramiento con shapefile** para:
 - **Temporales**: Tendencias, velocidad de cambio
 - **Espaciales**: Autocorrelación, clustering
 
-### 📈 Visualizaciones Profesionales
+### Visualizaciones Profesionales
 
 - Mapas de calor con escala apropiada
 - Series temporales con bandas de confianza
@@ -152,7 +152,7 @@ Todos los análisis utilizan **enmascaramiento con shapefile** para:
 - Histogramas de distribución
 - Matrices de correlación
 
-## 📝 Estructura de Reportes
+## Estructura de Reportes
 
 Todos los análisis generan reportes en formato CSV en la carpeta `reportes/`:
 
@@ -234,7 +234,7 @@ python graficar_series_indices.py
 - Crea carpeta `datos_filtrados/` con imágenes procesadas
 - Genera `reporte_filtrado.csv` con estadísticas del filtrado
 - Muestra cuántos píxeles fueron eliminados por imagen
-## 💡 Consejos para la Tesis
+## Consejos para la Tesis
 
 ### Justificación de Análisis
 
@@ -263,7 +263,7 @@ python graficar_series_indices.py
 **Coeficiente de Variación (CV):**
 - CV < 10%: Campo homogéneo (✓ bueno)
 - CV 10-20%: Moderadamente heterogéneo
-- CV > 20%: Muy heterogéneo (⚠️ problemas)
+- CV > 20%: Muy heterogéneo (problemas)
 
 **P-valor en tendencias:**
 - p < 0.05: Tendencia significativa (confiable)
@@ -301,7 +301,7 @@ Este proyecto es parte de una tesis de grado. Para consultas:
 - Consultar comentarios en código
 - Ejecutar scripts con flag `-h` para ayuda
 
-## 📄 Licencia
+## Licencia
 
 Proyecto académico - UPIITA IPN
 

@@ -77,9 +77,9 @@ def abrir_carpeta_visualizaciones(indice=None):
     if carpeta.exists():
         import subprocess
         subprocess.Popen(f'explorer "{carpeta}"')
-        print(f"\n✅ Abriendo carpeta: {carpeta}")
+        print(f"\nAbriendo carpeta: {carpeta}")
     else:
-        print(f"\n⚠️  Carpeta no existe: {carpeta}")
+        print(f"\nADVERTENCIA: Carpeta no existe: {carpeta}")
 
 
 def generar_reporte_html():
@@ -91,7 +91,7 @@ def generar_reporte_html():
     indices = obtener_indices_disponibles()
     
     if not indices:
-        print("\n⚠️  No hay índices con visualizaciones")
+        print("\nADVERTENCIA: No hay índices con visualizaciones")
         return
     
     # Crear HTML
@@ -172,7 +172,7 @@ def generar_reporte_html():
     </style>
 </head>
 <body>
-    <h1>📊 Reporte de Análisis de Índices de Vegetación</h1>
+    <h1>Reporte de Análisis de Índices de Vegetación</h1>
     <div class="stats">
         <p><strong>Fecha de generación:</strong> """ + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + """</p>
         <p><strong>Proyecto:</strong> Análisis de Áreas Verdes - Tesis UPIITA</p>
@@ -241,12 +241,12 @@ def generar_reporte_html():
     archivo_html = RUTA_VISUALIZACIONES.parent / "reporte_visualizaciones.html"
     archivo_html.write_text(html, encoding='utf-8')
     
-    print(f"\n✅ Reporte HTML generado: {archivo_html}")
-    print(f"📊 Total de imágenes incluidas: {total_imgs}")
+    print(f"\nReporte HTML generado: {archivo_html}")
+    print(f"Total de imágenes incluidas: {total_imgs}")
     
     # Abrir en navegador
     webbrowser.open(archivo_html.as_uri())
-    print("\n🌐 Abriendo reporte en navegador...")
+    print("\nAbriendo reporte en navegador...")
     
     return archivo_html
 
@@ -266,19 +266,19 @@ def menu_principal():
         print("OPCIONES")
         print("="*80)
         print("""
-  1. 📋 Listar todas las visualizaciones
-  2. 📂 Abrir carpeta de visualizaciones (explorador)
-  3. 🌐 Generar reporte HTML completo
+  1. Listar todas las visualizaciones
+  2. Abrir carpeta de visualizaciones (explorador)
+  3. Generar reporte HTML completo
   4. 📊 Ver visualizaciones de un índice específico
-  5. 📄 Abrir carpeta de reportes CSV
+  5. Abrir carpeta de reportes CSV
   
-  0. ❌ Salir
+  0. Salir
         """)
         
         opcion = input("Selecciona una opción: ").strip()
         
         if opcion == '0':
-            print("\n👋 ¡Hasta pronto!")
+            print("\n¡Hasta pronto!")
             break
         
         elif opcion == '1':
@@ -310,20 +310,20 @@ def menu_principal():
             if RUTA_REPORTES.exists():
                 import subprocess
                 subprocess.Popen(f'explorer "{RUTA_REPORTES}"')
-                print(f"\n✅ Abriendo carpeta: {RUTA_REPORTES}")
+                print(f"\nAbriendo carpeta: {RUTA_REPORTES}")
             else:
-                print(f"\n⚠️  Carpeta no existe: {RUTA_REPORTES}")
+                print(f"\nADVERTENCIA: Carpeta no existe: {RUTA_REPORTES}")
         
         else:
-            print("\n⚠️  Opción no válida")
+            print("\nADVERTENCIA: Opción no válida")
 
 
 if __name__ == "__main__":
     try:
         menu_principal()
     except KeyboardInterrupt:
-        print("\n\n👋 Sistema interrumpido")
+        print("\n\nSistema interrumpido")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nERROR: {e}")
         import traceback
         traceback.print_exc()

@@ -176,14 +176,14 @@ if __name__ == "__main__":
     errores = validar_configuracion()
     
     if errores:
-        print("\n❌ ERRORES ENCONTRADOS:")
+        print("\nERRORES ENCONTRADOS:")
         for error in errores:
             print(f"  • {error}")
     else:
-        print("\n✅ Configuración válida")
+        print("\nConfiguración válida")
         
         indices = obtener_indices_disponibles()
         if indices:
-            print(f"\n📊 Índices disponibles: {', '.join(indices)}")
+            print(f"\nÍndices disponibles: {', '.join(indices)}")
         else:
-            print("\n⚠️  No se encontraron índices con datos")
+            print("\nADVERTENCIA: No se encontraron índices con datos")

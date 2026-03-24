@@ -40,7 +40,7 @@ def ejemplo_leer_csv_pixeles(indice="MSAVI"):
     if imagenes:
         img_info = imagenes[0]
         
-        print(f"\n📄 Procesando: {img_info['nombre_archivo']}")
+        print(f"\nProcesando: {img_info['nombre_archivo']}")
         print(f"   Fecha: {img_info['fecha_str']}")
         
         # Verificar si tiene CSV de píxeles
@@ -55,7 +55,7 @@ def ejemplo_leer_csv_pixeles(indice="MSAVI"):
             print(f"   Columnas: {list(df.columns)}")
             
             # Estadísticas básicas
-            print(f"\n📈 Estadísticas del índice {indice}:")
+            print(f"\nEstadísticas del índice {indice}:")
             print(f"   Mínimo: {df['valor'].min():.4f}")
             print(f"   Máximo: {df['valor'].max():.4f}")
             print(f"   Media: {df['valor'].mean():.4f}")
@@ -66,10 +66,10 @@ def ejemplo_leer_csv_pixeles(indice="MSAVI"):
             print(df.head().to_string(index=False))
             
         else:
-            print("   ⚠️ No se encontró CSV de píxeles")
+            print("   ADVERTENCIA: No se encontró CSV de píxeles")
     
     else:
-        print(f"\n⚠️ No se encontraron imágenes para {indice}")
+        print(f"\nADVERTENCIA: No se encontraron imágenes para {indice}")
 
 
 def ejemplo_analisis_comparativo():

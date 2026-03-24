@@ -1,19 +1,19 @@
-# 📚 Guía de Interpretación de Resultados
+# Guía de Interpretación de Resultados
 
-## 🎯 ¿Qué significan los números que ves?
+## ¿Qué significan los números que ves?
 
 Esta guía te explica **qué es cada resultado** y **cómo interpretarlo** para tu tesis.
 
 ---
 
-## 📊 ANÁLISIS TEMPORAL (El más importante)
+## ANÁLISIS TEMPORAL (El más importante)
 
 ### 1. Tendencia Lineal
 
 Cuando ejecutas el análisis temporal, ves algo como esto:
 
 ```
-1️⃣  Calculando tendencia lineal...
+[1] Calculando tendencia lineal...
    • Pendiente: -0.00155079
    • R²: 0.2002
    • P-valor: 0.047934
@@ -40,8 +40,8 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 
 **P-VALOR: 0.047934**
 - Mide si la tendencia es **confiable o puede ser casualidad**
-- **p < 0.05** = ✅ SIGNIFICATIVO (confiable, no es azar)
-- **p > 0.05** = ❌ NO significativo (puede ser casualidad)
+- **p < 0.05** = SIGNIFICATIVO (confiable, no es azar)
+- **p > 0.05** = NO significativo (puede ser casualidad)
 - Ejemplo: p=0.048 < 0.05 → La tendencia SÍ es real, no es azar
 
 **CAMBIO TOTAL: -32.70%**
@@ -49,7 +49,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 - -32.70% = Perdió casi un tercio de su valor
 - Si empezó en 0.50 y terminó en 0.34, perdió el 32%
 
-#### 📝 Cómo escribirlo en la tesis:
+#### Cómo escribirlo en la tesis:
 
 > *"El índice MSAVI presentó una tendencia decreciente significativa (p=0.048 < 0.05), con una pérdida promedio de 0.00155 unidades por día. Durante el período de estudio, se registró una disminución total del 32.7%. El coeficiente de determinación (R²=0.20) indica variabilidad moderada en torno a la tendencia, pero la dirección del cambio es consistente hacia el deterioro."*
 
@@ -58,7 +58,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 ### 2. Test de Mann-Kendall
 
 ```
-2️⃣  Test de Mann-Kendall...
+[2] Test de Mann-Kendall...
    • Tau de Kendall: -0.5579
    • P-valor: 0.000359
    • Resultado: TENDENCIA DECRECIENTE (significativa)
@@ -76,9 +76,9 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 **P-VALOR: 0.000359**
 - Mismo concepto que antes
 - p=0.00036 es MUCHO menor que 0.05
-- ✅ Altamente significativo (99.96% de confianza)
+- Altamente significativo (99.96% de confianza)
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"El test no paramétrico de Mann-Kendall confirmó la tendencia decreciente (Tau=-0.56, p<0.001), validando los resultados de la regresión lineal con alta confiabilidad estadística."*
 
@@ -87,7 +87,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 ### 3. Velocidad de Cambio
 
 ```
-3️⃣  Calculando velocidad de cambio...
+[3] Calculando velocidad de cambio...
    • Velocidad promedio: -0.005383 unidades/día
    • Velocidad máxima: 0.047882 unidades/día
    • Velocidad mínima: -0.103627 unidades/día
@@ -110,7 +110,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 - Indica deterioro muy rápido
 - Puede señalar un evento específico (sequía, daño)
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"El análisis de velocidad de cambio reveló una disminución promedio de 0.0054 unidades por día entre mediciones consecutivas. Se detectó un evento de deterioro acelerado con pérdida de 0.1036 unidades/día, posiblemente asociado a condiciones de estrés hídrico o térmico."*
 
@@ -119,7 +119,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 ### 4. Comparación de Períodos
 
 ```
-6️⃣  Comparando periodos...
+[6] Comparando periodos...
    • Periodo 1: 10 imágenes, Media = 0.4443
    • Periodo 2: 10 imágenes, Media = 0.3542
    • Cambio: -0.0901 (-20.28%)
@@ -134,7 +134,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 - **Cambio -20.28%**: La segunda mitad está 20% peor que la primera
 - **"Significativo"**: La diferencia es real, no es azar
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"La comparación entre períodos mostró un deterioro significativo (p<0.05), con una media de 0.44 en el primer período (septiembre-octubre) versus 0.35 en el segundo (noviembre-enero), representando una disminución del 20.3%."*
 
@@ -143,7 +143,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 ### 5. Punto de Quiebre
 
 ```
-7️⃣  Detectando punto de quiebre...
+[7] Detectando punto de quiebre...
    • Fecha de quiebre: 2025-10-27
    • Tipo de cambio: DESACELERACIÓN de la tendencia
    • R² total: 0.8977
@@ -166,13 +166,13 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 - Qué tan bien el modelo con quiebre explica los datos
 - 0.90 es muy alto = el quiebre explica muy bien el cambio
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"Se identificó un punto de quiebre estructural el 27 de octubre de 2025 (R²=0.90), marcando una transición en la dinámica temporal. A partir de esta fecha se observó una desaceleración en la tasa de deterioro, sugiriendo cambios en las condiciones ambientales."*
 
 ---
 
-## 🗺️ ANÁLISIS ESPACIAL
+## ANÁLISIS ESPACIAL
 
 ### Hotspots y Coldspots
 
@@ -195,7 +195,7 @@ Cuando ejecutas el análisis temporal, ves algo como esto:
 - 12.3% = El 12.3% del área está en mal estado
 - Media 0.12 = En estas zonas el índice es solo 0.12 (bajo)
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"El análisis espacial identificó zonas críticas (coldspots) que representan el 12.3% del área total, con valores medios de 0.12. En contraste, solo el 8.5% del área presenta condiciones óptimas (hotspots, media=0.78), evidenciando heterogeneidad espacial significativa."*
 
@@ -219,7 +219,7 @@ Cluster 4: 978 px (8.4%), Media=0.79 [MUY ALTO]
 - **Cluster 4**: Solo el 8% tiene valores muy altos (0.79)
 - Conclusión: La mayor parte del área (50%) está en estado bajo-medio
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"El análisis de clustering K-means identificó cinco grupos espaciales distintos. El 20% del área se clasifica en el cluster de menor vigor (media=0.15), mientras que solo el 8% alcanza el nivel más alto (media=0.79). Aproximadamente el 50% del área se encuentra en condiciones bajas a medias, indicando necesidad de intervención."*
 
@@ -250,13 +250,13 @@ Cluster 4: 978 px (8.4%), Media=0.79 [MUY ALTO]
 - NO están distribuidas aleatoriamente
 - Sugiere que hay **factores locales** (drenaje, sombra, suelo) que afectan zonas contiguas
 
-#### 📝 Cómo escribirlo:
+#### Cómo escribirlo:
 
 > *"El índice I de Moran (I=0.65, p<0.001) reveló autocorrelación espacial positiva significativa, indicando que las zonas con vegetación degradada tienden a agruparse geográficamente. Este patrón sugiere que factores ambientales locales (drenaje, microclima, tipo de suelo) influyen en áreas contiguas, en lugar de una distribución aleatoria del deterioro."*
 
 ---
 
-## 🎯 SEGMENTACIÓN DE ZONAS
+## SEGMENTACIÓN DE ZONAS
 
 ### Resultados por Zona
 
@@ -298,7 +298,7 @@ Zona 4: 978 px (8%), Media=0.79
 
 ---
 
-## 💡 EJEMPLO COMPLETO: Interpretación Integrada
+## EJEMPLO COMPLETO: Interpretación Integrada
 
 ### Datos obtenidos:
 
@@ -317,7 +317,7 @@ Zona 4: 978 px (8%), Media=0.79
 - Zona crítica (20%): -45.3%
 - Zona saludable (8%): +15.8%
 
-### ✅ Interpretación para la Tesis:
+### Interpretación para la Tesis:
 
 > **"RESULTADOS Y DISCUSIÓN"**
 >
@@ -333,7 +333,7 @@ Zona 4: 978 px (8%), Media=0.79
 
 ---
 
-## 🎓 Consejos para la Tesis
+## Consejos para la Tesis
 
 ### 1. Siempre reporta 3 cosas:
 
@@ -344,10 +344,10 @@ Zona 4: 978 px (8%), Media=0.79
 ### 2. Usa lenguaje técnico pero claro:
 
 ❌ **Mal:** "Los números bajaron"
-✅ **Bien:** "Se observó una tendencia decreciente significativa (p<0.05)"
+**Bien:** "Se observó una tendencia decreciente significativa (p<0.05)"
 
 ❌ **Mal:** "Hay zonas malas"
-✅ **Bien:** "Se identificaron coldspots que representan el 12.3% del área"
+**Bien:** "Se identificaron coldspots que representan el 12.3% del área"
 
 ### 3. Conecta los análisis:
 
@@ -754,7 +754,7 @@ $$\text{Kurtosis} = \frac{\frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^4}{\sigma^4} 
 
 ---
 
-## 📊 VISUALIZACIÓN DE GRÁFICAS
+## VISUALIZACIÓN DE GRÁFICAS
 
 ### ¿Dónde están las gráficas?
 
@@ -797,4 +797,4 @@ Las imágenes están en formato PNG de alta resolución (150 DPI), listas para i
 
 ---
 
-**¡Éxito con tu tesis! 🎓📊🌿**
+**¡Éxito con tu tesis!**

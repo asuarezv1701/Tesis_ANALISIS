@@ -47,7 +47,7 @@ try:
     RUTA_REPORTES_PREDICCIONES = RUTA_REPORTES / "05_predicciones"
     RUTA_REPORTES_PREDICCIONES.mkdir(exist_ok=True, parents=True)
 except ImportError as e:
-    print(f"❌ Error importando módulos: {e}")
+    print(f"ERROR: Error importando módulos: {e}")
     print(f"Ruta actual: {Path.cwd()}")
     print(f"Ruta del script: {Path(__file__).parent}")
     print(f"Ruta del proyecto: {project_root}")
@@ -96,7 +96,8 @@ class RedNeuronalSimple:
         
         # Eliminar NaN
         validos = ~np.isnan(y)
-        if validos.sum() < 3:
+        # Con series cortas aceptamos 2 puntos para no bloquear el analisis.
+        if validos.sum() < 2:
             return False
         
         x = x[validos]
@@ -154,7 +155,7 @@ def preparar_datos_por_pixel(imagenes_info):
     - array 3D: [filas, columnas, tiempo]
     - fechas: lista de fechas
     """
-    print("\n📦 Cargando imágenes...")
+    print("\nCargando imágenes...")
     
     # Cargar todas las imágenes
     imagenes_datos = []
@@ -185,9 +186,11 @@ def predecir_por_pixel(datos_3d, n_dias_futuro=30):
     - mapa_cambio: imagen mostrando si mejorará o empeorará
     """
     filas, cols, n_tiempos = datos_3d.shape
+    ventana_modelo = min(5, max(1, n_tiempos - 1))
     
     print(f"\n🧠 Entrenando red neuronal para cada píxel...")
     print(f"   Total de píxeles a analizar: {filas * cols:,}")
+    print(f"   Ventana temporal del modelo: {ventana_modelo} observaciones")
     
     # Preparar mapas de salida
     mapa_prediccion = np.full((filas, cols), np.nan)
@@ -210,7 +213,7 @@ def predecir_por_pixel(datos_3d, n_dias_futuro=30):
             pixeles_procesados += 1
             
             # Entrenar red para este píxel
-            red = RedNeuronalSimple(ventana=5)
+            red = RedNeuronalSimple(ventana=ventana_modelo)
             
             if red.entrenar(serie):
                 # Hacer predicción
@@ -266,79 +269,205 @@ def clasificar_cambio(valor_cambio):
 
 def crear_mapa_visual_simple(mapa_cambio, indice, fechas, n_dias_futuro):
     """
-    Crea un mapa muy fácil de entender con colores claros.
+    Crea un mapa de predicción con degradado profesional y fácil de entender.
+    Incluye leyenda clara y explicaciones de lo que significa cada color.
     """
-    # Clasificar cada píxel
-    mapa_categorias = np.full_like(mapa_cambio, 0)
+    from matplotlib.colors import LinearSegmentedColormap
+    import matplotlib.patches as mpatches
     
-    for i in range(mapa_cambio.shape[0]):
-        for j in range(mapa_cambio.shape[1]):
-            categoria, _ = clasificar_cambio(mapa_cambio[i, j])
-            mapa_categorias[i, j] = categoria
-    
-    # Crear figura grande y clara
-    fig, ax = plt.subplots(figsize=(14, 10))
-    
-    # Colores muy claros y distintivos
-    colores = [
-        '#FFFFFF',  # Sin datos (blanco)
-        '#8B0000',  # Empeorará mucho (rojo oscuro)
-        '#FF6B6B',  # Empeorará poco (rojo claro)
-        '#FFD93D',  # Estable (amarillo)
-        '#95E1D3',  # Mejorará poco (verde claro)
-        '#00A86B',  # Mejorará mucho (verde oscuro)
+    # Crear paleta de degradado suave (rojo -> blanco -> verde)
+    colores_degradado = [
+        '#B71C1C',  # Rojo oscuro (deterioro severo)
+        '#E53935',  # Rojo
+        '#EF5350',  # Rojo claro
+        '#FFCDD2',  # Rosa muy claro
+        '#FFFFFF',  # Blanco (sin cambio)
+        '#C8E6C9',  # Verde muy claro
+        '#66BB6A',  # Verde claro
+        '#43A047',  # Verde
+        '#1B5E20'   # Verde oscuro (mejora significativa)
     ]
+    cmap_prediccion = LinearSegmentedColormap.from_list('prediccion', colores_degradado, N=256)
     
-    from matplotlib.colors import ListedColormap
-    cmap = ListedColormap(colores)
+    # Calcular límites basados en la distribución de cambios
+    datos_validos = mapa_cambio[~np.isnan(mapa_cambio)]
+    if len(datos_validos) > 0:
+        limite = max(abs(np.percentile(datos_validos, 5)), abs(np.percentile(datos_validos, 95)))
+        limite = max(limite, 0.01)  # Mínimo
+    else:
+        limite = 0.1
     
-    # Mostrar mapa
-    im = ax.imshow(mapa_categorias, cmap=cmap, vmin=0, vmax=5)
-    ax.axis('off')
+    # Crear figura con layout profesional
+    fig = plt.figure(figsize=(18, 14), facecolor='white')
     
-    # Título grande y claro
+    # Layout: mapa grande a la izquierda, panel de información a la derecha
+    gs = fig.add_gridspec(2, 2, width_ratios=[3, 1.2], height_ratios=[4, 1], 
+                         wspace=0.08, hspace=0.15)
+    
+    ax_mapa = fig.add_subplot(gs[0, 0])
+    ax_leyenda = fig.add_subplot(gs[0, 1])
+    ax_barra = fig.add_subplot(gs[1, 0])
+    ax_stats = fig.add_subplot(gs[1, 1])
+    
+    # ===== MAPA PRINCIPAL =====
+    im = ax_mapa.imshow(mapa_cambio, cmap=cmap_prediccion, interpolation='bilinear',
+                       vmin=-limite, vmax=limite)
+    ax_mapa.axis('off')
+    
+    # Título del mapa
     fecha_inicio = fechas[0].strftime('%d/%m/%Y')
     fecha_fin = fechas[-1].strftime('%d/%m/%Y')
     fecha_prediccion = (fechas[-1] + timedelta(days=n_dias_futuro)).strftime('%d/%m/%Y')
     
-    titulo = f"""
-PREDICCIÓN DE VEGETACIÓN - {INDICES_INFO[indice]['nombre']}
-
-Datos históricos: {fecha_inicio} a {fecha_fin}
-Predicción para: {fecha_prediccion} ({n_dias_futuro} días adelante)
-
-¿Cómo leer este mapa?
-"""
+    ax_mapa.set_title(f'PREDICCIÓN DE CAMBIO - {INDICES_INFO[indice]["nombre"]} ({indice})\n'
+                     f'Proyección para: {fecha_prediccion}', 
+                     fontsize=16, fontweight='bold', pad=15)
     
-    ax.set_title(titulo, fontsize=14, fontweight='bold', pad=20)
+    # ===== BARRA DE COLOR HORIZONTAL =====
+    cb = plt.colorbar(im, cax=ax_barra, orientation='horizontal')
+    cb.set_label('Cambio Esperado en el Índice', fontsize=11, fontweight='bold')
+    ax_barra.set_title('← DETERIORO                                                     MEJORA →', 
+                      fontsize=10, color='#666666', pad=5)
     
-    # Leyenda grande y clara
-    categorias = [
-        'Sin datos',
-        'Empeorará mucho',
-        'Empeorará poco',
-        'Se mantendrá estable',
-        'Mejorará poco',
-        'Mejorará mucho'
+    # ===== PANEL DE LEYENDA =====
+    ax_leyenda.axis('off')
+    ax_leyenda.set_xlim(0, 1)
+    ax_leyenda.set_ylim(0, 1)
+    
+    y_pos = 0.98
+    
+    # Título
+    ax_leyenda.text(0.05, y_pos, '¿QUÉ MUESTRA ESTE MAPA?', fontsize=13, fontweight='bold',
+                   transform=ax_leyenda.transAxes, va='top', color='#1976D2')
+    y_pos -= 0.06
+    
+    # Explicación
+    explicacion = f"""Este mapa predice cómo cambiará 
+la vegetación en los próximos
+{n_dias_futuro} días basándose en los
+patrones históricos observados."""
+    ax_leyenda.text(0.05, y_pos, explicacion, fontsize=10, transform=ax_leyenda.transAxes, 
+                   va='top', color='#444444', linespacing=1.3)
+    y_pos -= 0.18
+    
+    # Guía de colores con degradado visual
+    ax_leyenda.text(0.05, y_pos, 'GUÍA DE COLORES:', fontsize=11, fontweight='bold',
+                   transform=ax_leyenda.transAxes, va='top')
+    y_pos -= 0.04
+    
+    guia_colores = [
+        ('#1B5E20', 'Verde oscuro', 'Mejorará mucho', '(+5% o más)'),
+        ('#43A047', 'Verde', 'Mejorará', '(+2% a +5%)'),
+        ('#C8E6C9', 'Verde claro', 'Mejorará poco', '(+0.5% a +2%)'),
+        ('#FFFFFF', 'Blanco', 'Sin cambio', '(-0.5% a +0.5%)'),
+        ('#FFCDD2', 'Rosa claro', 'Empeorará poco', '(-2% a -0.5%)'),
+        ('#E53935', 'Rojo', 'Empeorará', '(-5% a -2%)'),
+        ('#B71C1C', 'Rojo oscuro', 'Empeorará mucho', '(-5% o menos)'),
     ]
     
-    patches = [mpatches.Patch(color=colores[i], label=categorias[i]) 
-               for i in range(len(categorias))]
+    for color, nombre, desc, rango in guia_colores:
+        # Caja de color
+        rect = mpatches.FancyBboxPatch((0.05, y_pos - 0.022), 0.12, 0.03,
+                                       boxstyle="round,pad=0.01",
+                                       facecolor=color, edgecolor='#888888', linewidth=0.5,
+                                       transform=ax_leyenda.transAxes)
+        ax_leyenda.add_patch(rect)
+        
+        ax_leyenda.text(0.20, y_pos - 0.008, desc, fontsize=9, fontweight='bold',
+                       transform=ax_leyenda.transAxes, va='center')
+        ax_leyenda.text(0.20, y_pos - 0.032, rango, fontsize=8, color='#666666',
+                       transform=ax_leyenda.transAxes, va='center')
+        y_pos -= 0.055
     
-    ax.legend(handles=patches, loc='center left', bbox_to_anchor=(1, 0.5),
-              fontsize=12, frameon=True, fancybox=True, shadow=True)
+    # Separador
+    y_pos -= 0.02
+    ax_leyenda.axhline(y=y_pos, xmin=0.05, xmax=0.95, color='#DDDDDD', 
+                      linewidth=1, transform=ax_leyenda.transAxes)
+    y_pos -= 0.04
     
-    plt.tight_layout()
+    # Interpretación
+    ax_leyenda.text(0.05, y_pos, 'CÓMO INTERPRETAR:', fontsize=11, fontweight='bold',
+                   transform=ax_leyenda.transAxes, va='top', color='#E65100')
+    y_pos -= 0.05
+    
+    interpretacion = """• Zonas VERDES: Esperan mejora
+  en la salud de vegetación
+  
+• Zonas ROJAS: Podrían presentar
+  estrés o deterioro
+
+• Zonas BLANCAS: Se mantendrán
+  relativamente estables"""
+    
+    ax_leyenda.text(0.05, y_pos, interpretacion, fontsize=9, transform=ax_leyenda.transAxes,
+                   va='top', color='#555555', linespacing=1.3)
+    
+    # ===== PANEL DE ESTADÍSTICAS =====
+    ax_stats.axis('off')
+    
+    # Calcular estadísticas
+    total = np.sum(~np.isnan(mapa_cambio))
+    if total > 0:
+        mejora_fuerte = np.sum(mapa_cambio > 0.05) / total * 100
+        mejora = np.sum((mapa_cambio > 0.02) & (mapa_cambio <= 0.05)) / total * 100
+        estable = np.sum(np.abs(mapa_cambio) <= 0.02) / total * 100
+        deterioro = np.sum((mapa_cambio < -0.02) & (mapa_cambio >= -0.05)) / total * 100
+        deterioro_fuerte = np.sum(mapa_cambio < -0.05) / total * 100
+        
+        cambio_promedio = np.nanmean(mapa_cambio) * 100
+        
+        # Determinar tendencia general
+        if deterioro + deterioro_fuerte > mejora + mejora_fuerte + 10:
+            tendencia = "ALERTA: Posible deterioro general"
+            color_tend = '#D32F2F'
+        elif mejora + mejora_fuerte > deterioro + deterioro_fuerte + 10:
+            tendencia = "FAVORABLE: Tendencia a mejorar"
+            color_tend = '#388E3C'
+        else:
+            tendencia = "ESTABLE: Sin cambios mayores"
+            color_tend = '#F9A825'
+        
+        # Mostrar resumen
+        ax_stats.text(0.1, 0.9, 'RESUMEN DE PREDICCIÓN:', fontsize=12, fontweight='bold',
+                     transform=ax_stats.transAxes, va='top')
+        
+        ax_stats.text(0.1, 0.75, tendencia, fontsize=11, fontweight='bold',
+                     transform=ax_stats.transAxes, va='top', color=color_tend)
+        
+        barras_info = f"""
+Mejorará:     {mejora_fuerte + mejora:>5.1f}%  ████████
+Estable:      {estable:>5.1f}%  ████████
+Empeorará:    {deterioro_fuerte + deterioro:>5.1f}%  ████████
+
+Cambio promedio: {cambio_promedio:+.2f}%"""
+        
+        ax_stats.text(0.1, 0.60, barras_info, fontsize=10, family='monospace',
+                     transform=ax_stats.transAxes, va='top')
+        
+        # Nota de fechas
+        ax_stats.text(0.1, 0.15, f'Datos: {fecha_inicio} a {fecha_fin}', fontsize=9,
+                     transform=ax_stats.transAxes, va='top', color='#888888')
+        ax_stats.text(0.1, 0.08, f'Predicción a {n_dias_futuro} días', fontsize=9,
+                     transform=ax_stats.transAxes, va='top', color='#888888')
     
     # Guardar
     carpeta_pred = RUTA_VISUALIZACIONES / indice / "prediccion"
     carpeta_pred.mkdir(parents=True, exist_ok=True)
     
     archivo = carpeta_pred / f"{indice}_prediccion_{n_dias_futuro}dias_{datetime.now().strftime('%Y%m%d')}.png"
-    plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(archivo, dpi=150, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     
-    print(f"✓ Mapa guardado: {archivo}")
+    print(f"✓ Mapa de predicción guardado: {archivo}")
+    
+    # También crear clasificación por categorías para el informe
+    mapa_categorias = np.full_like(mapa_cambio, 0)
+    mapa_categorias[mapa_cambio < -0.05] = 1  # Empeorará mucho
+    mapa_categorias[(mapa_cambio >= -0.05) & (mapa_cambio < -0.02)] = 2  # Empeorará poco
+    mapa_categorias[(mapa_cambio >= -0.02) & (mapa_cambio <= 0.02)] = 3  # Estable
+    mapa_categorias[(mapa_cambio > 0.02) & (mapa_cambio <= 0.05)] = 4  # Mejorará poco
+    mapa_categorias[mapa_cambio > 0.05] = 5  # Mejorará mucho
+    mapa_categorias[np.isnan(mapa_cambio)] = 0  # Sin datos
     
     return archivo, mapa_categorias
 
@@ -370,10 +499,10 @@ def crear_informe_simple(indice, mapa_categorias, mapa_cambio, mapa_prediccion, 
     
     if pixeles_deterioro > pixeles_mejora:
         tendencia_general = "DETERIORO"
-        emoji = "⚠️"
+        emoji = "ALERTA:"
     elif pixeles_mejora > pixeles_deterioro:
         tendencia_general = "MEJORA"
-        emoji = "✅"
+        emoji = "OK:"
     else:
         tendencia_general = "ESTABLE"
         emoji = "➡️"
@@ -406,7 +535,7 @@ En los próximos {n_dias_futuro} días, se espera que la vegetación:
   • Mejore levemente:            {porcentajes['mejorara_poco']:>6.1f}% del área
   • Mejore significativamente:   {porcentajes['mejorara_mucho']:>6.1f}% del área
 
-📈 INDICADORES NUMÉRICOS:
+INDICADORES NUMÉRICOS:
 {'-'*80}
 
   • Cambio promedio esperado: {cambio_promedio_pct:+.2f}%
@@ -415,7 +544,7 @@ En los próximos {n_dias_futuro} días, se espera que la vegetación:
   • Valor actual promedio: {np.nanmean(mapa_prediccion):>.4f}
   • Valor predicho promedio: {np.nanmean(mapa_prediccion + mapa_cambio):>.4f}
 
-💡 ¿QUÉ SIGNIFICA ESTO?
+¿QUÉ SIGNIFICA ESTO?
 {'-'*80}
 
 El índice {indice} ({INDICES_INFO[indice]['nombre']}) mide:
@@ -426,7 +555,7 @@ El índice {indice} ({INDICES_INFO[indice]['nombre']}) mide:
     # Añadir interpretación específica
     if tendencia_general == "DETERIORO":
         informe += f"""
-⚠️  ALERTA: La predicción indica un deterioro en la vegetación.
+ALERTA: La predicción indica un deterioro en la vegetación.
 
 Posibles causas a investigar:
   • Falta de riego o precipitación
@@ -439,7 +568,7 @@ Recomendación: Monitorear de cerca y considerar intervenciones.
     
     elif tendencia_general == "MEJORA":
         informe += f"""
-✅ POSITIVO: La predicción indica una mejora en la vegetación.
+OK: La predicción indica una mejora en la vegetación.
 
 Factores favorables posibles:
   • Buen régimen de riego
@@ -517,9 +646,13 @@ def ejecutar_prediccion(indice, n_dias_futuro=30):
     ruta_indice = RUTA_DESCARGAS / indice
     imagenes_info = listar_imagenes_indice(ruta_indice)
     
-    if len(imagenes_info) < 5:
-        print(f"\n❌ Se necesitan al menos 5 imágenes para entrenar. Solo hay {len(imagenes_info)}")
+    if len(imagenes_info) < 2:
+        print(f"\nERROR: Se necesitan al menos 2 imágenes para entrenar. Solo hay {len(imagenes_info)}")
         return None
+    elif len(imagenes_info) < 5:
+        print(f"\nADVERTENCIA: Solo hay {len(imagenes_info)} imágenes.")
+        print("   Se recomienda un mínimo de 5 para resultados más robustos.")
+        print("   El modelo continuará en modo simplificado para series cortas.")
     
     print(f"\n✓ Encontradas {len(imagenes_info)} imágenes")
     print(f"  • Primera: {imagenes_info[0]['fecha_str']}")
@@ -538,7 +671,7 @@ def ejecutar_prediccion(indice, n_dias_futuro=30):
     )
     
     # 5. Crear informe
-    print("\n📝 Generando informe...")
+    print("\nGenerando informe...")
     archivo_informe = crear_informe_simple(
         indice, mapa_categorias, mapa_cambio, mapa_prediccion, fechas, n_dias_futuro
     )
@@ -574,7 +707,7 @@ if __name__ == "__main__":
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         sys.exit(1)
     
     # Detectar modo automático
@@ -583,7 +716,7 @@ if __name__ == "__main__":
     
     if modo_automatico:
         # Ejecutar todos automáticamente
-        print("\n🚀 Modo automático: ejecutando para todos los índices\n")
+        print("\nModo automático: ejecutando para todos los índices\n")
         
         resultados = []
         

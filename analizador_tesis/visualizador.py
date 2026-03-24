@@ -323,8 +323,8 @@ def generar_dashboard_indice(df, indice, archivo_salida=None):
         indice: Nombre del índice
         archivo_salida: Path para guardar (opcional)
     """
-    fig = plt.figure(figsize=(16, 12))
-    gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(18, 14))
+    gs = fig.add_gridspec(3, 2, hspace=0.4, wspace=0.35)
     
     # Filtrar datos válidos
     df_valido = df[df['pixeles_validos'] > 0].copy()
@@ -339,82 +339,105 @@ def generar_dashboard_indice(df, indice, archivo_salida=None):
     
     # 1. Serie temporal de media
     ax1 = fig.add_subplot(gs[0, :])
-    ax1.plot(df_valido['fecha'], df_valido['media'], marker='o', linewidth=2, color='#2ecc71')
+    ax1.plot(df_valido['fecha'], df_valido['media'], marker='o', linewidth=2, color='#2ecc71', label='Media')
     ax1.fill_between(df_valido['fecha'], 
                      df_valido['media'] - df_valido['std'],
                      df_valido['media'] + df_valido['std'],
-                     alpha=0.3, color='#2ecc71')
-    ax1.set_title(f'{indice} - Evolución Temporal (Media ± Desv. Estándar)')
-    ax1.set_xlabel('Fecha')
-    ax1.set_ylabel('Valor')
+                     alpha=0.3, color='#2ecc71', label='± Desv. Est.')
+    ax1.set_title(f'{indice} - Evolución Temporal', fontsize=12, fontweight='bold', pad=10)
+    ax1.set_xlabel('Fecha', fontsize=10)
+    ax1.set_ylabel('Valor', fontsize=10)
     ax1.grid(True, alpha=0.3)
-    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    ax1.legend(loc='upper right', fontsize=9)
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=30, ha='right', fontsize=9)
     
-    # 2. Boxplot temporal
+    # 2. Boxplot temporal - Mejorado con menos etiquetas
     ax2 = fig.add_subplot(gs[1, 0])
-    fechas_str = [str(f)[:10] for f in df_valido['fecha']]
-    bp = ax2.boxplot([df_valido.iloc[i:i+1]['media'].values for i in range(len(df_valido))],
+    n_fechas = len(df_valido)
+    
+    # Seleccionar un subconjunto de fechas si hay muchas
+    if n_fechas > 8:
+        indices_mostrar = np.linspace(0, n_fechas - 1, 8, dtype=int)
+        df_boxplot = df_valido.iloc[indices_mostrar]
+    else:
+        df_boxplot = df_valido
+    
+    fechas_str = [str(f.date()) for f in df_boxplot['fecha']]
+    bp = ax2.boxplot([df_boxplot.iloc[i:i+1]['media'].values for i in range(len(df_boxplot))],
                      labels=fechas_str, patch_artist=True)
     for patch in bp['boxes']:
         patch.set_facecolor('#3498db')
-    ax2.set_title('Distribución por Fecha')
-    ax2.set_ylabel('Valor')
-    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=90, ha='right', fontsize=8)
+    ax2.set_title('Distribución por Fecha', fontsize=11, fontweight='bold', pad=10)
+    ax2.set_ylabel('Valor', fontsize=10)
+    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right', fontsize=8)
     ax2.grid(True, alpha=0.3, axis='y')
     
     # 3. Evolución del CV
     ax3 = fig.add_subplot(gs[1, 1])
-    ax3.plot(df_valido['fecha'], df_valido['cv'], marker='o', linewidth=2, color='#e74c3c')
-    ax3.axhline(10, color='green', linestyle='--', alpha=0.5)
-    ax3.axhline(20, color='orange', linestyle='--', alpha=0.5)
-    ax3.axhline(30, color='red', linestyle='--', alpha=0.5)
-    ax3.set_title('Evolución del Coeficiente de Variación')
-    ax3.set_xlabel('Fecha')
-    ax3.set_ylabel('CV (%)')
+    ax3.plot(df_valido['fecha'], df_valido['cv'], marker='o', linewidth=2, color='#e74c3c', label='CV')
+    ax3.axhline(10, color='green', linestyle='--', alpha=0.7, linewidth=1.5, label='Homogéneo (10%)')
+    ax3.axhline(20, color='orange', linestyle='--', alpha=0.7, linewidth=1.5, label='Moderado (20%)')
+    ax3.axhline(30, color='red', linestyle='--', alpha=0.7, linewidth=1.5, label='Heterogéneo (30%)')
+    ax3.set_title('Coeficiente de Variación', fontsize=11, fontweight='bold', pad=10)
+    ax3.set_xlabel('Fecha', fontsize=10)
+    ax3.set_ylabel('CV (%)', fontsize=10)
+    ax3.legend(loc='upper right', fontsize=8, framealpha=0.9)
     ax3.grid(True, alpha=0.3)
-    plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    plt.setp(ax3.xaxis.get_majorticklabels(), rotation=30, ha='right', fontsize=8)
     
     # 4. Histograma de valores medios
     ax4 = fig.add_subplot(gs[2, 0])
-    ax4.hist(df_valido['media'], bins=20, color='#9b59b6', alpha=0.7, edgecolor='black')
-    ax4.axvline(df_valido['media'].mean(), color='red', linestyle='--', linewidth=2)
-    ax4.set_title('Distribución de Valores Medios')
-    ax4.set_xlabel('Valor Medio')
-    ax4.set_ylabel('Frecuencia')
+    ax4.hist(df_valido['media'], bins=min(20, len(df_valido)), color='#9b59b6', alpha=0.7, edgecolor='black')
+    media_global = df_valido['media'].mean()
+    ax4.axvline(media_global, color='red', linestyle='--', linewidth=2, label=f'Media: {media_global:.3f}')
+    ax4.set_title('Distribución de Valores Medios', fontsize=11, fontweight='bold', pad=10)
+    ax4.set_xlabel('Valor Medio', fontsize=10)
+    ax4.set_ylabel('Frecuencia', fontsize=10)
+    ax4.legend(loc='upper right', fontsize=9)
     ax4.grid(True, alpha=0.3)
     
-    # 5. Tabla de estadísticas
+    # 5. Tabla de estadísticas - Mejorada
     ax5 = fig.add_subplot(gs[2, 1])
     ax5.axis('off')
     
-    stats_texto = f"""
-    ESTADÍSTICAS GLOBALES
-    ════════════════════════════
+    # Calcular estadísticas con formato legible
+    media_g = df_valido['media'].mean()
+    mediana_g = df_valido['mediana'].mean()
+    std_g = df_valido['std'].mean()
+    cv_prom = df_valido['cv'].mean()
+    min_abs = df_valido['min'].min()
+    max_abs = df_valido['max'].max()
+    p05_prom = df_valido['p05'].mean()
+    p95_prom = df_valido['p95'].mean()
     
-    Imágenes analizadas: {len(df_valido)}
+    stats_texto = f"""ESTADÍSTICAS GLOBALES
+{'═'*30}
+
+  Imágenes analizadas:  {len(df_valido)}
+
+  Media global:         {media_g:.4f}
+  Mediana global:       {mediana_g:.4f}
+  Desv. estándar:       {std_g:.4f}
+
+  Rango absoluto:
+    Min: {min_abs:.4f}   Max: {max_abs:.4f}
+
+  CV promedio:          {cv_prom:.1f}%
+
+  Percentiles promedio:
+    P5:  {p05_prom:.4f}
+    P95: {p95_prom:.4f}"""
     
-    Media global:        {df_valido['media'].mean():.6f}
-    Mediana global:      {df_valido['mediana'].mean():.6f}
-    Desv. estándar:      {df_valido['std'].mean():.6f}
-    
-    Rango absoluto:      [{df_valido['min'].min():.4f}, {df_valido['max'].max():.4f}]
-    
-    CV promedio:         {df_valido['cv'].mean():.2f}%
-    Heterogeneidad:      {df_valido['heterogeneidad'].mode()[0] if len(df_valido['heterogeneidad'].mode()) > 0 else 'N/A'}
-    
-    Percentiles promedio:
-      P5:  {df_valido['p05'].mean():.6f}
-      P95: {df_valido['p95'].mean():.6f}
-    """
-    
-    ax5.text(0.1, 0.9, stats_texto, transform=ax5.transAxes,
+    ax5.text(0.05, 0.95, stats_texto, transform=ax5.transAxes,
             fontsize=10, verticalalignment='top', fontfamily='monospace',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+            bbox=dict(boxstyle='round', facecolor='#f8f9fa', alpha=0.8, pad=0.5))
     
-    fig.suptitle(f'Dashboard de Análisis - {indice}', fontsize=16, fontweight='bold')
+    fig.suptitle(f'Dashboard de Análisis - {indice}', fontsize=16, fontweight='bold', y=0.98)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     
     if archivo_salida:
-        plt.savefig(archivo_salida, dpi=DPI_GRAFICAS, bbox_inches='tight')
+        plt.savefig(archivo_salida, dpi=DPI_GRAFICAS, bbox_inches='tight', facecolor='white')
         plt.close()
     else:
         plt.show()

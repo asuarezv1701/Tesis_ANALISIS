@@ -8,7 +8,7 @@ Este script:
 4. Crea visualizaciones de distribución y evolución temporal
 5. Identifica imágenes con problemas de calidad
 
-⭐ MEJORAS RESPECTO A LA VERSIÓN ANTERIOR:
+MEJORAS RESPECTO A LA VERSIÓN ANTERIOR:
 - Enmascaramiento automático (solo píxeles dentro del polígono)
 - Estadísticas más completas (CV, heterogeneidad, outliers)
 - Reportes por fecha e índice
@@ -196,7 +196,7 @@ def analizar_indice(indice):
     imagenes = listar_imagenes_indice(ruta_indice)
     
     if not imagenes:
-        print(f"\n⚠️  No se encontraron imágenes para {indice}")
+        print(f"\nADVERTENCIA: No se encontraron imágenes para {indice}")
         return None
     
     print(f"\nEncontradas {len(imagenes)} imágenes")
@@ -206,7 +206,7 @@ def analizar_indice(indice):
     
     for i, img_info in enumerate(imagenes, 1):
         fecha_str = img_info['fecha_str'] or img_info['carpeta']
-        fuente_icono = "📄" if img_info.get('csv_pixeles') else "🖼️"
+        fuente_icono = "[CSV]" if img_info.get('csv_pixeles') else "[TIFF]"
         print(f"[{i}/{len(imagenes)}] {fuente_icono} {fecha_str}... ", end='', flush=True)
         
         resultado = analizar_imagen(img_info, indice)
@@ -249,27 +249,27 @@ def mostrar_resumen_indice(df, indice):
     df_validas = df[df['pixeles_validos'] > 0].copy()
     
     if len(df_validas) == 0:
-        print("\n❌ No hay imágenes válidas para analizar")
+        print("\nERROR: No hay imágenes válidas para analizar")
         return
     
     n_total = len(df)
     n_validas = len(df_validas)
     n_errores = n_total - n_validas
     
-    print(f"\n📊 IMÁGENES:")
+    print(f"\nIMÁGENES:")
     print(f"  • Total analizadas: {n_total}")
     print(f"  • Válidas: {n_validas} ({n_validas/n_total*100:.1f}%)")
     if n_errores > 0:
         print(f"  • Con errores: {n_errores}")
     
-    print(f"\n📈 ESTADÍSTICAS GLOBALES:")
+    print(f"\nESTADÍSTICAS GLOBALES:")
     print(f"  • Media global: {df_validas['media'].mean():.6f}")
     print(f"  • Mediana global: {df_validas['mediana'].mean():.6f}")
     print(f"  • Desv. estándar promedio: {df_validas['std'].mean():.6f}")
     print(f"  • Valor mínimo absoluto: {df_validas['min'].min():.6f}")
     print(f"  • Valor máximo absoluto: {df_validas['max'].max():.6f}")
     
-    print(f"\n📊 PERCENTILES PROMEDIO:")
+    print(f"\nPERCENTILES PROMEDIO:")
     print(f"  •  1%: {df_validas['p01'].mean():.6f}")
     print(f"  •  5%: {df_validas['p05'].mean():.6f}")
     print(f"  • 25%: {df_validas['p25'].mean():.6f}")
@@ -278,7 +278,7 @@ def mostrar_resumen_indice(df, indice):
     print(f"  • 95%: {df_validas['p95'].mean():.6f}")
     print(f"  • 99%: {df_validas['p99'].mean():.6f}")
     
-    print(f"\n🔍 HETEROGENEIDAD:")
+    print(f"\nHETEROGENEIDAD:")
     cv_promedio = df_validas['cv'].mean()
     print(f"  • CV promedio: {cv_promedio:.2f}%")
     print(f"  • Clasificación: {clasificar_heterogeneidad(cv_promedio)}")
@@ -290,7 +290,7 @@ def mostrar_resumen_indice(df, indice):
         if n > 0:
             print(f"    • {categoria}: {n} imágenes ({n/len(df_validas)*100:.1f}%)")
     
-    print(f"\n⚠️  CALIDAD DE IMÁGENES:")
+    print(f"\nCALIDAD DE IMÁGENES:")
     for calidad in df_validas['calidad'].unique():
         n = len(df_validas[df_validas['calidad'] == calidad])
         print(f"  • {calidad}: {n} imágenes ({n/len(df_validas)*100:.1f}%)")
@@ -298,12 +298,12 @@ def mostrar_resumen_indice(df, indice):
     # Outliers
     outliers_promedio = df_validas['pct_outliers'].mean()
     if outliers_promedio > 0:
-        print(f"\n🔴 OUTLIERS:")
+        print(f"\nOUTLIERS:")
         print(f"  • Promedio de outliers: {outliers_promedio:.2f}%")
         print(f"  • Máximo detectado: {df_validas['pct_outliers'].max():.2f}%")
     
     # Recomendaciones de umbrales
-    print(f"\n💡 RECOMENDACIONES PARA FILTRADO:")
+    print(f"\nRECOMENDACIONES PARA FILTRADO:")
     p05_promedio = df_validas['p05'].mean()
     p95_promedio = df_validas['p95'].mean()
     print(f"  • Umbral inferior sugerido: {p05_promedio:.4f} (percentil 5)")
@@ -345,10 +345,10 @@ def generar_visualizaciones(df, indice):
     df_validas = df[df['pixeles_validos'] > 0].copy()
     
     if len(df_validas) == 0:
-        print("\n⚠️  No hay datos válidos para generar visualizaciones")
+        print("\nADVERTENCIA: No hay datos válidos para generar visualizaciones")
         return
     
-    print(f"\n📊 Generando visualizaciones para {indice}...")
+    print(f"\nGenerando visualizaciones para {indice}...")
     
     # Crear carpeta para el índice
     carpeta_indice = RUTA_VISUALIZACIONES / indice
@@ -380,13 +380,13 @@ def generar_visualizaciones(df, indice):
         )
         print(f"  ✓ Gráfica de CV generada: {archivo_cv.name}")
         
-        print(f"\n✅ Visualizaciones guardadas en: {carpeta_indice}")
+        print(f"\nVisualizaciones guardadas en: {carpeta_indice}")
         
     except Exception as e:
-        print(f"\n⚠️  Error al generar visualizaciones: {e}")
+        print(f"\nADVERTENCIA: Error al generar visualizaciones: {e}")
         archivo_problemas = RUTA_REPORTES_EXPLORATORIO / f"problemas_{indice}_{timestamp}.csv"
         df_problemas.to_csv(archivo_problemas, index=False)
-        print(f"⚠️  Reporte de problemas guardado: {archivo_problemas.name}")
+        print(f"ADVERTENCIA: Reporte de problemas guardado: {archivo_problemas.name}")
 
 
 # ============================================================================
@@ -416,7 +416,7 @@ def menu_principal():
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         return
     
     while True:
@@ -479,10 +479,10 @@ def menu_principal():
             if 0 <= num < len(indices_disponibles):
                 analizar_indice(indices_disponibles[num])
             else:
-                print("\n❌ Número inválido")
+                print("\nERROR: Número inválido")
         
         else:
-            print("\n❌ Opción no válida")
+            print("\nERROR: Opción no válida")
 
 
 def mostrar_resumen_global(resultados):
@@ -528,7 +528,7 @@ if __name__ == "__main__":
     import os
     if os.environ.get('ANALISIS_AUTOMATICO') == '1':
         # Modo automático: analizar todos los índices sin menú
-        print("\n🚀 Modo automático: analizando TODOS los índices\n")
+        print("\nModo automático: analizando TODOS los índices\n")
         indices_disponibles = obtener_indices_disponibles()
         
         resultados_globales = {}

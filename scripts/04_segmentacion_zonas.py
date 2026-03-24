@@ -9,7 +9,7 @@ Este script realiza segmentación del área de estudio y análisis por zonas:
 5. Identificación de zonas problemáticas/saludables
 6. Mapas de zonificación
 
-⭐ ANÁLISIS CLAVE PARA IDENTIFICAR HETEROGENEIDAD ESPACIAL
+ANÁLISIS CLAVE PARA IDENTIFICAR HETEROGENEIDAD ESPACIAL
 """
 
 import sys
@@ -74,17 +74,17 @@ def segmentar_por_clustering(imagenes_datos, n_zonas=5):
     print(f"{'='*80}")
     
     # Calcular imagen promedio
-    print("\n1️⃣  Calculando imagen promedio temporal...")
+    print("\n[1] Calculando imagen promedio temporal...")
     imagen_promedio = np.nanmean(imagenes_datos, axis=0)
     n_validos = np.sum(~np.isnan(imagen_promedio))
     print(f"   ✓ Píxeles válidos: {n_validos}")
     
     # Aplicar clustering
-    print(f"\n2️⃣  Aplicando K-means con {n_zonas} clusters...")
+    print(f"\n[2] Aplicando K-means con {n_zonas} clusters...")
     resultado_cluster = clustering_kmeans(imagen_promedio, n_clusters=n_zonas, incluir_coords=True)
     
     if not resultado_cluster:
-        print("   ❌ Error en clustering")
+        print("   ERROR: Error en clustering")
         return None
     
     # Crear máscara de zonas (reordenar por media)
@@ -101,7 +101,7 @@ def segmentar_por_clustering(imagenes_datos, n_zonas=5):
         mascara = (resultado_cluster['clusters_2d'] == cluster_id)
         mascara_zonas_ordenada[mascara] = zona_id
     
-    print("\n3️⃣  Estadísticas de zonas:")
+    print("\n[3] Estadísticas de zonas:")
     for i, cluster_info in enumerate(resultado_cluster['stats_clusters']):
         print(f"   • Zona {i}: {cluster_info['n_pixeles']} px ({cluster_info['porcentaje']:.1f}%), "
               f"Media={cluster_info['media']:.4f}")
@@ -304,7 +304,7 @@ def analizar_evolucion_zonas(mascara_zonas, imagenes_info, indice):
     print(f"   ✓ Procesadas {len(fechas)} fechas")
     
     # Convertir a DataFrames y calcular tendencias
-    print(f"\n📈 Calculando tendencias por zona...")
+    print(f"\nGenerando tendencias por zona...")
     resultados_zonas = {}
     
     for zona_id in range(n_zonas):
@@ -392,7 +392,7 @@ def comparar_zonas(resultados_zonas):
         zona_peor = df_comp.loc[df_comp['media_global'].idxmin(), 'zona']
         
         print(f"\n🏆 Zona con MEJOR media: Zona {int(zona_mejor)}")
-        print(f"⚠️  Zona con PEOR media: Zona {int(zona_peor)}")
+        print(f"ADVERTENCIA: Zona con PEOR media: Zona {int(zona_peor)}")
     
     return df_comp
 
@@ -422,7 +422,7 @@ def analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5):
     imagenes = listar_imagenes_indice(ruta_indice)
     
     if not imagenes:
-        print(f"\n⚠️  No se encontraron imágenes para {indice}")
+        print(f"\nADVERTENCIA: No se encontraron imágenes para {indice}")
         return None
     
     print(f"Encontradas {len(imagenes)} imágenes")
@@ -441,10 +441,10 @@ def analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5):
             print(f"✗ Error: {e}")
     
     if not imagenes_datos:
-        print("\n❌ No se pudieron cargar imágenes")
+        print("\nERROR: No se pudieron cargar imágenes")
         return None
     
-    print(f"\n✅ Cargadas {len(imagenes_datos)} imágenes")
+    print(f"\nCargadas {len(imagenes_datos)} imágenes")
     
     # Realizar segmentación
     if metodo == 'clustering':
@@ -465,11 +465,11 @@ def analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5):
         imagen_ref = np.nanmean(imagenes_datos, axis=0)
         segmentacion = segmentar_por_percentiles(imagen_ref, n_zonas=n_zonas)
     else:
-        print(f"\n❌ Método '{metodo}' no reconocido")
+        print(f"\nERROR: Método '{metodo}' no reconocido")
         return None
     
     if not segmentacion:
-        print("\n❌ Error en segmentación")
+        print("\nERROR: Error en segmentación")
         return None
     
     # Análisis temporal por zona
@@ -545,7 +545,7 @@ def generar_visualizaciones_segmentacion(indice, metodo, segmentacion, resultado
     """
     Genera visualizaciones de segmentación.
     """
-    print(f"\n📈 Generando visualizaciones...")
+    print(f"\nGenerando visualizaciones...")
     
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
@@ -699,7 +699,7 @@ def menu_principal():
     indices_disponibles = obtener_indices_disponibles()
     
     if not indices_disponibles:
-        print("\n❌ No se encontraron índices con datos.")
+        print("\nERROR: No se encontraron índices con datos.")
         return
     
     while True:
@@ -774,7 +774,7 @@ if __name__ == "__main__":
     import os
     if os.environ.get('ANALISIS_AUTOMATICO') == '1':
         # Modo automático: analizar todos los índices con clustering
-        print("\n🚀 Modo automático: segmentando TODOS los índices con clustering\n")
+        print("\nModo automático: segmentando TODOS los índices con clustering\n")
         indices_disponibles = obtener_indices_disponibles()
         for indice in indices_disponibles:
             analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5)
