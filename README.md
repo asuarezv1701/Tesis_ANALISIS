@@ -2,6 +2,9 @@
 
 Sistema modular y profesional para análisis espacial y temporal de datos satelitales de áreas verdes.
 
+> **📱 Usuarios de macOS/Linux:** Las instrucciones de este README están enfocadas en Windows.  
+> Para instrucciones específicas de macOS/Linux, consulta [README_macOS.md](README_macOS.md)
+
 ## Descripción del Proyecto
 
 Este sistema analiza datos de índices de vegetación obtenidos de imágenes satelitales Sentinel-2, con enfoque en:

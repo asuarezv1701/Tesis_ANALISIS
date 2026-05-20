@@ -7,17 +7,58 @@ Menú principal unificado para acceder a todos los análisis:
 - Análisis temporal
 - Análisis espacial
 - Segmentación de zonas
+- Predicciones futuras (Deep Learning)
+- Generación de reportes PDF
 
 Autor: Sistema de Análisis de Tesis
 Fecha: Enero 2026
 """
 
 import sys
+import os
 from pathlib import Path
 import subprocess
 
 # Agregar rutas
 sys.path.append(str(Path(__file__).parent))
+
+# ============================================================================
+# DETECCIÓN DE ENTORNO PYTHON CORRECTO
+# ============================================================================
+
+# Ruta del venv del proyecto (relativa a este archivo)
+_VENV_PYTHON = Path(__file__).parent.parent / "venv" / "bin" / "python"
+
+def _obtener_python():
+    """
+    Retorna la ruta al intérprete Python correcto.
+    Prefiere el venv del proyecto; si no existe, usa el intérprete actual.
+    """
+    if _VENV_PYTHON.exists():
+        return str(_VENV_PYTHON)
+    return sys.executable
+
+
+def verificar_entorno():
+    """
+    Verifica que el entorno Python sea el correcto y avisa si no lo es.
+    """
+    python_actual = Path(sys.executable).resolve()
+    python_venv = _VENV_PYTHON.resolve() if _VENV_PYTHON.exists() else None
+
+    if python_venv and python_actual != python_venv:
+        print("\n" + "!"*80)
+        print("ADVERTENCIA: No estás usando el entorno virtual del proyecto.")
+        print(f"  Python actual : {python_actual}")
+        print(f"  Python venv   : {python_venv}")
+        print("  Los sub-scripts se ejecutarán con el venv automáticamente.")
+        print("!"*80)
+    elif python_venv:
+        print(f"  Entorno: {python_actual} (venv correcto)")
+    else:
+        print(f"  Entorno: {python_actual}")
+        print("  NOTA: No se encontró el venv en ../venv/ — usando intérprete actual.")
+
 
 from configuracion.config import (
     obtener_indices_disponibles,
@@ -56,16 +97,14 @@ def mostrar_resumen_datos():
 
 
 def ejecutar_script(ruta_script):
-    """Ejecuta un script de Python."""
+    """Ejecuta un script de Python usando el venv del proyecto."""
     try:
-        # Agregar variable de entorno para modo automático
-        import os
         env = os.environ.copy()
         env['ANALISIS_AUTOMATICO'] = '1'
-        
+
         resultado = subprocess.run(
-            [sys.executable, str(ruta_script)],
-            cwd=Path(__file__).parent,  # Ejecutar desde la raíz del proyecto, no desde scripts/
+            [_obtener_python(), str(ruta_script)],
+            cwd=Path(__file__).parent,  # Ejecutar desde la raíz del proyecto
             capture_output=False,
             env=env
         )
@@ -170,7 +209,6 @@ ADVERTENCIA: Esto puede tomar 15-25 minutos
     print("="*80)
     print(f"  Reportes CSV:      {Path('reportes').absolute()}")
     print(f"  Visualizaciones:   {Path('visualizaciones').absolute()}")
-    print(f"  Datos procesados:  {Path('datos_procesados').absolute()}")
     
     print("\nPROXIMOS PASOS:")
     print("  1. Ejecuta: python ver_resultados.py")
@@ -190,7 +228,8 @@ ADVERTENCIA: Esto puede tomar 15-25 minutos
 def menu_principal():
     """Menú principal del sistema."""
     mostrar_banner()
-    
+    verificar_entorno()
+
     # Verificar datos
     indices = mostrar_resumen_datos()
     
@@ -233,6 +272,13 @@ ANALISIS DISPONIBLES:
       Explica que hace cada analisis
 
   ------------------------------------------------------------------------
+
+  [A] ACTUALIZAR CON DATOS NUEVOS
+      Solo procesa fechas/indices nuevos e integra con resultados anteriores
+      Muestra comparacion de tendencias: antes vs despues
+
+  [G] GENERAR GUIAS DE COLORES
+      Crea archivos TXT explicando que significa cada color en los mapas
 
   [T] EJECUTAR TODO
       Ejecuta todos los analisis (1-7) + genera PDFs automaticamente
@@ -292,6 +338,18 @@ ANALISIS DISPONIBLES:
         elif opcion == '8':
             mostrar_ayuda()
         
+        elif opcion == 'A':
+            print("\n" + "="*80)
+            print("EJECUTANDO: Actualizacion Incremental")
+            print("="*80)
+            ejecutar_script(scripts_dir / "actualizar_datos.py")
+
+        elif opcion == 'G':
+            print("\n" + "="*80)
+            print("EJECUTANDO: Generador de Guias de Colores")
+            print("="*80)
+            ejecutar_script(scripts_dir / "generar_guias_colores.py")
+
         elif opcion == 'T':
             ejecutar_analisis_completo(scripts_dir)
         
@@ -432,24 +490,6 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 5️⃣  SEGMENTACIÓN DE ZONAS                                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│ ¿QUÉ HACE?                                                              │
-│ • Divide el área en zonas más pequeñas                                 │
-│ • Analiza la evolución temporal de cada zona por separado             │
-│ • Compara cómo evolucionan las diferentes zonas                        │
-│                                                                         │
-│ ¿CUÁNDO USARLO?                                                         │
-│ • Para análisis más detallado por secciones                            │
-│ • Cuando quieres comparar diferentes partes del área                   │
-│                                                                         │
-│ RESULTADOS:                                                             │
-│ • Tendencia de cada zona individual                                    │
-│ • Comparación entre zonas                                              │
-│ • Zonas con mejor/peor evolución                                       │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
 │ [6] PREDICCIONES FUTURAS (DEEP LEARNING) - NUEVO                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
@@ -496,7 +536,7 @@ def mostrar_ayuda():
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 5️⃣  SEGMENTACIÓN DE ZONAS                                               │
+│ [5] SEGMENTACIÓN DE ZONAS                                               │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ¿QUÉ HACE?                                                              │
 │ • Divide el área en ZONAS (como regiones geográficas)                  │

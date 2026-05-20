@@ -1,3 +1,6 @@
+# INSTALACIÓN: pip install -r requirements.txt
+# OPCIÓN ALTERNATIVA: conda env create -f environment.yml (ver NOTAS_CONDA.txt en raíz)
+
 # Dependencias base
 numpy>=1.21.0
 pandas>=1.3.0

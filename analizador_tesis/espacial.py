@@ -284,6 +284,74 @@ def clustering_kmeans(imagen, n_clusters=5, incluir_coords=True):
     }
 
 
+def clasificar_por_umbrales_canonicos(imagen, umbrales):
+    """
+    Clasifica píxeles según los umbrales científicos fijos propios del índice.
+
+    A diferencia de K-means (que recalcula centros en cada imagen), esta función
+    asigna la misma etiqueta a los mismos valores en cualquier fecha, lo que
+    hace las zonas directamente comparables entre estaciones y años.
+
+    Los umbrales deben provenir de INDICES_INFO[indice]['umbrales_canonicos'],
+    por lo que su justificación es bibliográfica, no arbitraria.
+
+    Args:
+        imagen  : Array 2D con valores del índice (puede contener NaN).
+        umbrales: Lista de dicts con claves 'zona', 'limite_inferior',
+                  'limite_superior', 'etiqueta' y 'color'.
+
+    Returns:
+        dict con:
+            'mascara_zonas' : Array 2D con ID de zona por píxel (NaN = sin dato).
+            'stats_zonas'   : Lista de dicts con estadísticas por zona.
+            'n_zonas'       : Número de zonas definidas.
+        None si la imagen no tiene píxeles válidos.
+    """
+    mascara_valida = ~np.isnan(imagen)
+    n_validos = int(np.sum(mascara_valida))
+
+    if n_validos == 0:
+        return None
+
+    mascara_zonas = np.full(imagen.shape, np.nan)
+    stats_zonas = []
+
+    for umbral in umbrales:
+        zona_id  = umbral['zona']
+        lim_inf  = umbral['limite_inferior']
+        lim_sup  = umbral['limite_superior']
+
+        if lim_sup == float('inf'):
+            zona_mask = mascara_valida & (imagen >= lim_inf)
+        else:
+            zona_mask = mascara_valida & (imagen >= lim_inf) & (imagen < lim_sup)
+
+        mascara_zonas[zona_mask] = zona_id
+
+        valores_zona = imagen[zona_mask]
+        n_zona = int(np.sum(zona_mask))
+
+        stats_zonas.append({
+            'cluster'         : zona_id,
+            'etiqueta'        : umbral['etiqueta'],
+            'color'           : umbral['color'],
+            'limite_inferior' : lim_inf,
+            'limite_superior' : lim_sup if lim_sup != float('inf') else '∞',
+            'n_pixeles'       : n_zona,
+            'porcentaje'      : float(n_zona / n_validos * 100),
+            'media'           : float(np.mean(valores_zona))  if n_zona > 0 else np.nan,
+            'std'             : float(np.std(valores_zona))   if n_zona > 0 else np.nan,
+            'min'             : float(np.min(valores_zona))   if n_zona > 0 else np.nan,
+            'max'             : float(np.max(valores_zona))   if n_zona > 0 else np.nan,
+        })
+
+    return {
+        'mascara_zonas': mascara_zonas,
+        'stats_zonas'  : stats_zonas,
+        'n_zonas'      : len(umbrales),
+    }
+
+
 def clustering_dbscan(imagen, eps=0.5, min_samples=10, incluir_coords=True):
     """
     Aplica DBSCAN clustering a la imagen.

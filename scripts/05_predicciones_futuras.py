@@ -381,8 +381,7 @@ patrones históricos observados."""
     
     # Separador
     y_pos -= 0.02
-    ax_leyenda.axhline(y=y_pos, xmin=0.05, xmax=0.95, color='#DDDDDD', 
-                      linewidth=1, transform=ax_leyenda.transAxes)
+    ax_leyenda.axhline(y=y_pos, xmin=0.05, xmax=0.95, color='#DDDDDD', linewidth=1)
     y_pos -= 0.04
     
     # Interpretación

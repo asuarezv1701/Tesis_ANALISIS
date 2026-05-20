@@ -13,6 +13,7 @@ ANÁLISIS CLAVE PARA IDENTIFICAR PATRONES ESPACIALES
 """
 
 import sys
+import re
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -52,6 +53,207 @@ RUTA_REPORTES_ESPACIAL = RUTA_REPORTES / "02_espacial"
 RUTA_REPORTES_ESPACIAL.mkdir(exist_ok=True, parents=True)
 
 warnings.filterwarnings('ignore')
+
+
+# ============================================================================
+# UTILIDADES DE ESTACIONALIDAD
+# ============================================================================
+
+_ESTACIONES_ORDEN = ['primavera', 'verano', 'otono', 'invierno']
+_ESTACIONES_NOMBRE = {
+    'primavera': 'Primavera (Mar–Jun)',
+    'verano':    'Verano    (Jun–Sep)',
+    'otono':     'Otoño     (Sep–Dic)',
+    'invierno':  'Invierno  (Dic–Mar)',
+}
+
+
+def _obtener_estacion(fecha):
+    """Devuelve la estación del año para una fecha (hemisferio norte, México)."""
+    mes, dia = fecha.month, fecha.day
+    if (mes == 3 and dia >= 21) or mes in [4, 5] or (mes == 6 and dia <= 20):
+        return 'primavera'
+    elif (mes == 6 and dia >= 21) or mes in [7, 8] or (mes == 9 and dia <= 22):
+        return 'verano'
+    elif (mes == 9 and dia >= 23) or mes in [10, 11] or (mes == 12 and dia <= 20):
+        return 'otono'
+    else:
+        return 'invierno'
+
+
+def seleccionar_fechas_estacionales(imagenes):
+    """
+    De una lista de imágenes (dicts con clave 'fecha'), selecciona 4 representativas
+    (una por estación). Elige la imagen cuya fecha es más cercana al centro de la estación.
+
+    Centros de estación (hemisferio norte):
+      Primavera → 5 de mayo      (mes 5, día 5)
+      Verano    → 5 de agosto    (mes 8, día 5)
+      Otoño     → 5 de noviembre (mes 11, día 5)
+      Invierno  → 5 de febrero   (mes 2, día 5)
+
+    Args:
+        imagenes: lista de dicts con clave 'fecha' (objeto datetime o None)
+
+    Returns:
+        list de dicts (subconjunto de imagenes), ordenados por estación
+    """
+    CENTROS = {
+        'primavera': (5, 5),
+        'verano':    (8, 5),
+        'otono':     (11, 5),
+        'invierno':  (2, 5),
+    }
+
+    grupos = {est: [] for est in _ESTACIONES_ORDEN}
+
+    for img in imagenes:
+        fecha = img.get('fecha')
+        if fecha is None:
+            continue
+        grupos[_obtener_estacion(fecha)].append(img)
+
+    seleccionadas = []
+    for estacion in _ESTACIONES_ORDEN:
+        candidatos = grupos[estacion]
+        if not candidatos:
+            continue
+        mes_c, dia_c = CENTROS[estacion]
+
+        def distancia(img, mes_c=mes_c, dia_c=dia_c):
+            f = img['fecha']
+            try:
+                centro = datetime(f.year, mes_c, dia_c)
+            except ValueError:
+                centro = datetime(f.year, mes_c, 28)
+            return abs((f - centro).days)
+
+        candidatos.sort(key=distancia)
+        seleccionadas.append(candidatos[0])
+
+    return seleccionadas
+
+
+def calcular_imagenes_compuestas_estacionales(indice):
+    """
+    Calcula una imagen promedio para cada estación del año, acumulando TODAS las
+    imágenes de esa estación a lo largo de los 6 años de datos (2020-2025).
+
+    Esto es más robusto que elegir una sola fecha porque:
+    - Promedia ~40-50 imágenes por estación, eliminando efectos de nubes o lluvia puntual.
+    - Representa el comportamiento TÍPICO de la vegetación en esa época del año.
+    - Permite comparar las 4 estaciones con la misma base estadística.
+
+    Algoritmo: para cada píxel calcula sum(valores) / count(imágenes válidas),
+    ignorando NaN (eficiente en memoria, no carga todas las imágenes a la vez).
+
+    Returns:
+        dict: {estacion: array_2d_media} — solo estaciones con datos disponibles.
+    """
+    ruta_indice = RUTA_DESCARGAS / indice
+    imagenes = listar_imagenes_indice(ruta_indice)
+
+    if not imagenes:
+        return {}
+
+    print(f"\n🌿 Calculando imágenes compuestas estacionales para {indice}...")
+
+    # Obtener forma de imagen desde la primera disponible
+    primera_imagen = cargar_imagen_enmascarada(imagenes[0]['ruta'], RUTA_SHAPEFILE)
+    shape = primera_imagen.shape
+
+    # Acumuladores independientes por estación (no carga todo en memoria)
+    acc = {est: {'count': np.zeros(shape), 'sum_': np.zeros(shape)}
+           for est in _ESTACIONES_ORDEN}
+
+    for img_info in imagenes:
+        fecha = img_info.get('fecha')
+        if fecha is None:
+            continue
+        est = _obtener_estacion(fecha)
+        try:
+            datos = cargar_imagen_enmascarada(img_info['ruta'], RUTA_SHAPEFILE)
+            valido = ~np.isnan(datos)
+            acc[est]['count'][valido] += 1
+            acc[est]['sum_'][valido] += datos[valido]
+        except Exception as e:
+            print(f"   ⚠ No se pudo cargar {img_info.get('fecha_str', '?')}: {e}")
+
+    compuestos = {}
+    for est in _ESTACIONES_ORDEN:
+        count = acc[est]['count']
+        sum_  = acc[est]['sum_']
+        n_max = int(count.max())
+        if n_max == 0:
+            print(f"   • {_ESTACIONES_NOMBRE[est]}: sin datos")
+            continue
+        media = np.full(shape, np.nan)
+        con_datos = count > 0
+        media[con_datos] = sum_[con_datos] / count[con_datos]
+        compuestos[est] = media
+        print(f"   • {_ESTACIONES_NOMBRE[est]}: promedio de {n_max} imágenes")
+
+    return compuestos
+
+
+def calcular_mapa_variabilidad(indice):
+    """
+    Calcula la desviación estándar de cada píxel a lo largo de todo el período
+    (2020-2025), usando un algoritmo incremental que no requiere cargar todas
+    las imágenes simultáneamente en memoria.
+
+    Interpretación:
+      - Píxel con std ALTA → zona que cambia mucho entre imágenes.
+        Puede indicar: vegetación estacional fuerte, zona de riego variable,
+        influencia humana, o susceptibilidad al estrés hídrico.
+      - Píxel con std BAJA → zona estable.
+        Puede indicar: suelo desnudo permanente, vegetación arbórea densa,
+        o superficies impermeables (edificios, pavimento).
+
+    Returns:
+        tuple: (mapa_std, mapa_media, mapa_count) — tres arrays 2D
+               mapa_std   : desviación estándar temporal por píxel
+               mapa_media : media temporal por píxel
+               mapa_count : número de imágenes válidas por píxel
+    """
+    ruta_indice = RUTA_DESCARGAS / indice
+    imagenes = listar_imagenes_indice(ruta_indice)
+
+    if not imagenes:
+        return None, None, None
+
+    print(f"\n📊 Calculando mapa de variabilidad temporal para {indice}...")
+
+    primera = cargar_imagen_enmascarada(imagenes[0]['ruta'], RUTA_SHAPEFILE)
+    shape = primera.shape
+
+    count  = np.zeros(shape)
+    sum_   = np.zeros(shape)
+    sum_sq = np.zeros(shape)
+
+    for i, img_info in enumerate(imagenes):
+        try:
+            datos = cargar_imagen_enmascarada(img_info['ruta'], RUTA_SHAPEFILE)
+            valido = ~np.isnan(datos)
+            count[valido]  += 1
+            sum_[valido]   += datos[valido]
+            sum_sq[valido] += datos[valido] ** 2
+        except Exception:
+            pass
+        if (i + 1) % 50 == 0:
+            print(f"   Procesadas {i + 1}/{len(imagenes)} imágenes...")
+
+    print(f"   ✓ {len(imagenes)} imágenes procesadas")
+
+    mapa_media = np.full(shape, np.nan)
+    mapa_std   = np.full(shape, np.nan)
+    con_datos  = count > 1
+    mapa_media[con_datos] = sum_[con_datos] / count[con_datos]
+    # Varianza: E[X²] − E[X]²  (evita valores negativos por redondeo flotante)
+    varianza = (sum_sq[con_datos] / count[con_datos]) - mapa_media[con_datos] ** 2
+    mapa_std[con_datos] = np.sqrt(np.maximum(varianza, 0.0))
+
+    return mapa_std, mapa_media, count
 
 
 # ============================================================================
@@ -261,19 +463,30 @@ def analizar_espacial_indice(indice):
     print(f"\n{'='*80}")
     print("ANÁLISIS DE DIFERENCIAS TEMPORALES")
     print(f"{'='*80}")
-    
+
     resultado_diff = analizar_diferencias_temporales(indice)
-    
+
+    # --- Nuevos análisis: compuestos estacionales y variabilidad ---
+    compuestos_estacionales = calcular_imagenes_compuestas_estacionales(indice)
+    mapa_var, mapa_media_var, mapa_count_var = calcular_mapa_variabilidad(indice)
+
     # Guardar reportes
     guardar_reportes_espaciales(indice, resultados_imagenes, resultado_diff)
-    
+
     # Generar visualizaciones
-    generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_diff)
-    
+    generar_visualizaciones_espaciales(
+        indice, resultados_imagenes, resultado_diff,
+        compuestos_estacionales=compuestos_estacionales,
+        mapa_variabilidad=mapa_var,
+        mapa_media_var=mapa_media_var,
+    )
+
     return {
         'indice': indice,
         'resultados_imagenes': resultados_imagenes,
-        'diferencias_temporales': resultado_diff
+        'diferencias_temporales': resultado_diff,
+        'compuestos_estacionales': compuestos_estacionales,
+        'mapa_variabilidad': mapa_var,
     }
 
 
@@ -594,10 +807,19 @@ Para más información, consulte los archivos CSV generados en esta misma carpet
 # VISUALIZACIONES
 # ============================================================================
 
-def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_diff):
+def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_diff,
+                                       compuestos_estacionales=None, mapa_variabilidad=None,
+                                       mapa_media_var=None):
     """
     Genera visualizaciones del análisis espacial con paletas de degradado
     y descripciones claras de lo que representa cada color.
+
+    Los mapas de calor y hotspots se generan para todas las imágenes.
+    Los mapas de clustering (K-means) solo se generan para las 4 fechas
+    representativas de cada estación del año (primavera, verano, otoño, invierno).
+    Adicionalmente genera:
+    - Clustering sobre imágenes COMPUESTAS estacionales (Propuesta 1).
+    - Mapa de variabilidad temporal pixelwise (Propuesta 4).
     """
     print("\n📈 Generando visualizaciones...")
     
@@ -653,6 +875,36 @@ def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_di
             else:
                 return 'Alto contenido de agua'
         return ''
+    
+    # ------------------------------------------------------------------
+    # Determinar las 4 fechas estacionales representativas para clustering
+    # Se construye el conjunto de fechas a partir de resultados_imagenes
+    # ------------------------------------------------------------------
+    imagenes_con_fecha = []
+    for res in resultados_imagenes:
+        fecha_str = res.get('fecha', '')
+        fecha_obj = None
+        try:
+            fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+        except (ValueError, TypeError):
+            pass
+        imagenes_con_fecha.append({'fecha': fecha_obj, 'fecha_str': fecha_str, '_res': res})
+
+    estacionales_info = seleccionar_fechas_estacionales(imagenes_con_fecha)
+    fechas_clustering = {item['fecha_str']: item for item in estacionales_info}
+    # Mapeo estación → fecha_str para el título del mapa
+    estacion_por_fecha = {}
+    for i, estacion in enumerate(_ESTACIONES_ORDEN):
+        candidatos = [it for it in estacionales_info if _obtener_estacion(it['fecha']) == estacion]
+        if candidatos:
+            estacion_por_fecha[candidatos[0]['fecha_str']] = estacion
+
+    if fechas_clustering:
+        print(f"\n🌿 Clustering estacional — fechas seleccionadas para {indice}:")
+        for fstr, est in estacion_por_fecha.items():
+            print(f"   • {_ESTACIONES_NOMBRE[est]}: {fstr}")
+    else:
+        print("\n⚠️  No se pudieron determinar fechas estacionales; se generará clustering para todas las imágenes.")
     
     # Visualizaciones para cada imagen analizada
     for res in resultados_imagenes:
@@ -817,8 +1069,11 @@ def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_di
             plt.close()
             visualizaciones.append(archivo.name)
         
-        # 3. Clustering mejorado
-        if 'kmeans' in res:
+        # 3. Clustering mejorado — solo para las 4 fechas estacionales representativas
+        generar_clustering = (not fechas_clustering) or (fecha in fechas_clustering)
+        if 'kmeans' in res and generar_clustering:
+            estacion_actual = estacion_por_fecha.get(fecha, '')
+            nombre_est = _ESTACIONES_NOMBRE.get(estacion_actual, fecha)
             archivo = carpeta_vis / f"clustering_{indice}_{fecha}_{timestamp}.png"
             
             fig = plt.figure(figsize=(14, 10))
@@ -834,7 +1089,10 @@ def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_di
             
             im = ax_mapa.imshow(res['kmeans']['clusters_2d'], cmap=cmap_clusters, 
                                interpolation='nearest', vmin=0, vmax=4)
-            ax_mapa.set_title(f'{indice} - Segmentación por Zonas\\n{fecha}', fontsize=14, fontweight='bold')
+            titulo_mapa = (f'{indice} - Segmentación por Zonas\\n'
+                           f'{nombre_est}  —  {fecha}' if estacion_actual
+                           else f'{indice} - Segmentación por Zonas\\n{fecha}')
+            ax_mapa.set_title(titulo_mapa, fontsize=14, fontweight='bold')
             ax_mapa.axis('off')
             
             # Panel de leyenda
@@ -939,6 +1197,131 @@ def generar_visualizaciones_espaciales(indice, resultados_imagenes, resultado_di
         print(f"  • {nombre}")
     if len(visualizaciones) > 5:
         print(f"  ... y {len(visualizaciones)-5} más")
+
+    # -----------------------------------------------------------------------
+    # PROPUESTA 1: Clustering sobre imágenes compuestas estacionales
+    # -----------------------------------------------------------------------
+    if compuestos_estacionales:
+        print("\n🌿 Generando clustering de imágenes compuestas estacionales...")
+        colores_cluster = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5']
+        from matplotlib.colors import ListedColormap
+        cmap_clusters = ListedColormap(colores_cluster)
+
+        n_est = len(compuestos_estacionales)
+        fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+        axes = axes.flatten()
+        fig.suptitle(f'{indice} — Segmentación Estacional (Imagen Compuesta)\n'
+                     f'{INDICES_INFO[indice]["nombre"]}',
+                     fontsize=14, fontweight='bold', y=0.99)
+
+        for idx, est in enumerate(_ESTACIONES_ORDEN):
+            ax = axes[idx]
+            imagen_comp = compuestos_estacionales.get(est)
+            if imagen_comp is None:
+                ax.text(0.5, 0.5, 'Sin datos', ha='center', va='center')
+                ax.set_title(_ESTACIONES_NOMBRE[est])
+                ax.axis('off')
+                continue
+
+            kmeans_res = clustering_kmeans(imagen_comp, n_clusters=5, incluir_coords=True)
+            if kmeans_res is None:
+                ax.text(0.5, 0.5, 'No se pudo calcular', ha='center', va='center')
+                ax.axis('off')
+                continue
+
+            im = ax.imshow(kmeans_res['clusters_2d'], cmap=cmap_clusters,
+                           interpolation='nearest', vmin=0, vmax=4)
+            ax.set_title(f'{_ESTACIONES_NOMBRE[est]}', fontsize=12, fontweight='bold')
+            ax.axis('off')
+
+            # Leyenda interna: valor medio por zona
+            for i, ci in enumerate(kmeans_res['stats_clusters'][:5]):
+                ax.text(0.02, 0.98 - i * 0.10,
+                        f'Z{i+1}: {ci["media"]:.3f} ({ci["porcentaje"]:.0f}%)',
+                        transform=ax.transAxes, fontsize=7,
+                        color='white', fontweight='bold',
+                        bbox=dict(facecolor=colores_cluster[i], alpha=0.85, pad=1.5))
+
+        for j in range(idx + 1, 4):
+            axes[j].axis('off')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.97])
+        archivo_comp = carpeta_vis / f"clustering_compuesto_estacional_{indice}_{timestamp}.png"
+        plt.savefig(archivo_comp, dpi=150, bbox_inches='tight', facecolor='white')
+        plt.close()
+        visualizaciones.append(archivo_comp.name)
+        print(f"  • {archivo_comp.name}")
+
+    # -----------------------------------------------------------------------
+    # PROPUESTA 4: Mapa de variabilidad temporal
+    # -----------------------------------------------------------------------
+    if mapa_variabilidad is not None:
+        print("\n📊 Generando mapa de variabilidad temporal...")
+        from matplotlib.colors import LinearSegmentedColormap
+
+        colores_var = ['#1565C0', '#42A5F5', '#FFFFFF', '#EF9A9A', '#B71C1C']
+        cmap_var = LinearSegmentedColormap.from_list('variabilidad', colores_var, N=256)
+
+        fig = plt.figure(figsize=(14, 10))
+        gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.05)
+        ax_mapa   = fig.add_subplot(gs[0, 0])
+        ax_leyend = fig.add_subplot(gs[0, 1])
+
+        datos_val = mapa_variabilidad[~np.isnan(mapa_variabilidad)]
+        vmax_var  = np.percentile(datos_val, 95) if len(datos_val) > 0 else 1.0
+        im = ax_mapa.imshow(mapa_variabilidad, cmap=cmap_var,
+                            interpolation='bilinear', vmin=0, vmax=vmax_var)
+        ax_mapa.set_title(f'{indice} — Mapa de Variabilidad Temporal\n'
+                          f'(Desviación Estándar pixel a pixel, 2020–2025)',
+                          fontsize=13, fontweight='bold')
+        ax_mapa.axis('off')
+
+        cbar_ax = fig.add_axes([0.52, 0.15, 0.02, 0.70])
+        cb = plt.colorbar(im, cax=cbar_ax)
+        cb.set_label(f'Desviación estándar de {indice}', fontsize=9)
+
+        ax_leyend.axis('off')
+        ax_leyend.text(0.05, 0.97, '¿QUÉ MUESTRA?', fontsize=12, fontweight='bold',
+                       transform=ax_leyend.transAxes, va='top')
+        ax_leyend.text(0.05, 0.89,
+                       'Cada píxel muestra cuánto\nvarió su valor a lo largo\nde los 6 años de datos.',
+                       fontsize=10, transform=ax_leyend.transAxes, va='top')
+
+        items_leyenda = [
+            ('#1565C0', 'Baja variabilidad',
+             'Zona estable: suelo desnudo\npermanente, edificios, o\nvegetación arbórea densa.'),
+            ('#B71C1C', 'Alta variabilidad',
+             'Zona que cambia mucho:\nvegetación estacional fuerte,\nriego variable o estrés hídrico.'),
+        ]
+        y = 0.68
+        for color, etiqueta, desc in items_leyenda:
+            rect = mpatches.FancyBboxPatch((0.05, y - 0.015), 0.12, 0.04,
+                                           boxstyle='round,pad=0.01',
+                                           facecolor=color, edgecolor='#333', linewidth=0.5,
+                                           transform=ax_leyend.transAxes)
+            ax_leyend.add_patch(rect)
+            ax_leyend.text(0.20, y, etiqueta, fontsize=10, fontweight='bold',
+                           transform=ax_leyend.transAxes, va='center')
+            ax_leyend.text(0.20, y - 0.06, desc, fontsize=8, color='#555',
+                           transform=ax_leyend.transAxes, va='top')
+            y -= 0.22
+
+        if mapa_media_var is not None:
+            datos_v = mapa_variabilidad[~np.isnan(mapa_variabilidad)]
+            datos_m = mapa_media_var[~np.isnan(mapa_media_var)]
+            stats_txt = (f'Estadísticas globales:\n'
+                         f'  Std media:   {np.mean(datos_v):.4f}\n'
+                         f'  Std máxima:  {np.max(datos_v):.4f}\n'
+                         f'  Media {indice}: {np.mean(datos_m):.4f}')
+            ax_leyend.text(0.05, 0.15, stats_txt, fontsize=9, family='monospace',
+                           transform=ax_leyend.transAxes, va='top',
+                           bbox=dict(boxstyle='round', facecolor='#F5F5F5', alpha=0.8))
+
+        archivo_var = carpeta_vis / f"variabilidad_temporal_{indice}_{timestamp}.png"
+        plt.savefig(archivo_var, dpi=150, bbox_inches='tight', facecolor='white')
+        plt.close()
+        visualizaciones.append(archivo_var.name)
+        print(f"  • {archivo_var.name}")
 
 
 # ============================================================================

@@ -29,11 +29,12 @@ RUTA_RESULTADOS = RUTA_PROYECTO / "resultados"
 
 RUTA_REPORTES = RUTA_RESULTADOS / "reportes"
 RUTA_VISUALIZACIONES = RUTA_RESULTADOS / "visualizaciones"
-RUTA_DATOS_PROCESADOS = RUTA_RESULTADOS / "datos_procesados"
 RUTA_REPORTES_PDF = RUTA_RESULTADOS / "reportes_pdf"
+# Caché de estadísticas computadas por índice (para actualización incremental)
+RUTA_DATOS_PROCESADOS = RUTA_RESULTADOS / "datos_procesados"
 
 # Crear carpetas si no existen
-for ruta in [RUTA_REPORTES, RUTA_VISUALIZACIONES, RUTA_DATOS_PROCESADOS, RUTA_REPORTES_PDF]:
+for ruta in [RUTA_REPORTES, RUTA_VISUALIZACIONES, RUTA_REPORTES_PDF, RUTA_DATOS_PROCESADOS]:
     ruta.mkdir(exist_ok=True, parents=True)
 
 # ============================================================================
@@ -51,7 +52,17 @@ INDICES_INFO = {
             "0.2-0.5": "Vegetación escasa o estresada",
             "0.5-0.8": "Vegetación moderada a densa",
             "> 0.8": "Vegetación muy densa y saludable"
-        }
+        },
+        # Umbrales científicos fijos (Rouse et al. 1974; Tucker 1979).
+        # Al ser rangos definidos por la literatura, son comparables entre fechas
+        # y justificables sin decisión arbitraria.
+        "umbrales_canonicos": [
+            {"zona": 0, "limite_inferior": -1.0,        "limite_superior": 0.0,        "etiqueta": "Sin vegetación",          "color": "#d73027"},
+            {"zona": 1, "limite_inferior":  0.0,        "limite_superior": 0.2,        "etiqueta": "Suelo desnudo",           "color": "#fc8d59"},
+            {"zona": 2, "limite_inferior":  0.2,        "limite_superior": 0.4,        "etiqueta": "Vegetación escasa",       "color": "#fee08b"},
+            {"zona": 3, "limite_inferior":  0.4,        "limite_superior": 0.6,        "etiqueta": "Vegetación moderada",     "color": "#91cf60"},
+            {"zona": 4, "limite_inferior":  0.6,        "limite_superior": float('inf'), "etiqueta": "Vegetación densa",      "color": "#1a9850"},
+        ]
     },
     "NDRE": {
         "nombre": "Normalized Difference Red Edge",
@@ -60,7 +71,15 @@ INDICES_INFO = {
         "interpretacion": {
             "bajo": "Bajo contenido de clorofila",
             "alto": "Alto contenido de clorofila, detecta estrés temprano"
-        }
+        },
+        # Umbrales científicos fijos (Gitelson & Merzlyak 1994).
+        "umbrales_canonicos": [
+            {"zona": 0, "limite_inferior": -1.0,        "limite_superior": 0.0,        "etiqueta": "Sin actividad clorofílica", "color": "#d73027"},
+            {"zona": 1, "limite_inferior":  0.0,        "limite_superior": 0.15,       "etiqueta": "Clorofila muy baja",        "color": "#fc8d59"},
+            {"zona": 2, "limite_inferior":  0.15,       "limite_superior": 0.30,       "etiqueta": "Clorofila baja",            "color": "#fee08b"},
+            {"zona": 3, "limite_inferior":  0.30,       "limite_superior": 0.45,       "etiqueta": "Clorofila moderada",        "color": "#91cf60"},
+            {"zona": 4, "limite_inferior":  0.45,       "limite_superior": float('inf'), "etiqueta": "Clorofila alta",          "color": "#1a9850"},
+        ]
     },
     "MSAVI": {
         "nombre": "Modified Soil-Adjusted Vegetation Index",
@@ -69,7 +88,15 @@ INDICES_INFO = {
         "interpretacion": {
             "bajo": "Poca cobertura vegetal",
             "alto": "Mayor cobertura vegetal, minimiza efecto del suelo"
-        }
+        },
+        # Umbrales científicos fijos (Qi et al. 1994).
+        "umbrales_canonicos": [
+            {"zona": 0, "limite_inferior": -1.0,        "limite_superior": 0.0,        "etiqueta": "Sin cobertura vegetal",  "color": "#d73027"},
+            {"zona": 1, "limite_inferior":  0.0,        "limite_superior": 0.15,       "etiqueta": "Cobertura mínima",       "color": "#fc8d59"},
+            {"zona": 2, "limite_inferior":  0.15,       "limite_superior": 0.30,       "etiqueta": "Cobertura baja",         "color": "#fee08b"},
+            {"zona": 3, "limite_inferior":  0.30,       "limite_superior": 0.50,       "etiqueta": "Cobertura moderada",     "color": "#91cf60"},
+            {"zona": 4, "limite_inferior":  0.50,       "limite_superior": float('inf'), "etiqueta": "Cobertura alta",       "color": "#1a9850"},
+        ]
     },
     "RECI": {
         "nombre": "Red Edge Chlorophyll Index",
@@ -79,7 +106,15 @@ INDICES_INFO = {
             "0-5": "Bajo contenido de clorofila",
             "5-10": "Contenido moderado de clorofila",
             "> 10": "Alto contenido de clorofila"
-        }
+        },
+        # Umbrales científicos fijos (Gitelson et al. 2003).
+        "umbrales_canonicos": [
+            {"zona": 0, "limite_inferior":  0.0,        "limite_superior": 1.0,        "etiqueta": "Clorofila muy baja",  "color": "#d73027"},
+            {"zona": 1, "limite_inferior":  1.0,        "limite_superior": 3.0,        "etiqueta": "Clorofila baja",      "color": "#fc8d59"},
+            {"zona": 2, "limite_inferior":  3.0,        "limite_superior": 6.0,        "etiqueta": "Clorofila moderada",  "color": "#fee08b"},
+            {"zona": 3, "limite_inferior":  6.0,        "limite_superior": 10.0,       "etiqueta": "Clorofila alta",      "color": "#91cf60"},
+            {"zona": 4, "limite_inferior": 10.0,        "limite_superior": float('inf'), "etiqueta": "Clorofila muy alta", "color": "#1a9850"},
+        ]
     },
     "NDMI": {
         "nombre": "Normalized Difference Moisture Index",
@@ -88,7 +123,15 @@ INDICES_INFO = {
         "interpretacion": {
             "bajo": "Baja humedad, estrés hídrico",
             "alto": "Alta humedad en vegetación"
-        }
+        },
+        # Umbrales científicos fijos (Gao 1996).
+        "umbrales_canonicos": [
+            {"zona": 0, "limite_inferior": -1.0,        "limite_superior": -0.2,       "etiqueta": "Estrés hídrico severo", "color": "#d73027"},
+            {"zona": 1, "limite_inferior": -0.2,        "limite_superior":  0.0,       "etiqueta": "Estrés hídrico leve",   "color": "#fc8d59"},
+            {"zona": 2, "limite_inferior":  0.0,        "limite_superior":  0.2,       "etiqueta": "Humedad moderada",      "color": "#fee08b"},
+            {"zona": 3, "limite_inferior":  0.2,        "limite_superior":  0.4,       "etiqueta": "Humedad buena",         "color": "#91cf60"},
+            {"zona": 4, "limite_inferior":  0.4,        "limite_superior": float('inf'), "etiqueta": "Humedad alta",        "color": "#1a9850"},
+        ]
     }
 }
 

@@ -11,6 +11,7 @@ Formato profesional listo para incluir en tesis.
 """
 
 import sys
+import re
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -19,6 +20,89 @@ import numpy as np
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
+
+
+# ============================================================================
+# UTILIDADES DE ESTACIONALIDAD
+# ============================================================================
+
+ESTACIONES_NOMBRE = {
+    'primavera': 'Primavera  (Mar–Jun)',
+    'verano':    'Verano     (Jun–Sep)',
+    'otono':     'Otoño      (Sep–Dic)',
+    'invierno':  'Invierno   (Dic–Mar)',
+}
+ESTACIONES_ORDEN = ['primavera', 'verano', 'otono', 'invierno']
+
+
+def obtener_estacion(fecha):
+    """Devuelve la estación del año para una fecha (hemisferio norte, México)."""
+    mes, dia = fecha.month, fecha.day
+    if (mes == 3 and dia >= 21) or mes in [4, 5] or (mes == 6 and dia <= 20):
+        return 'primavera'
+    elif (mes == 6 and dia >= 21) or mes in [7, 8] or (mes == 9 and dia <= 22):
+        return 'verano'
+    elif (mes == 9 and dia >= 23) or mes in [10, 11] or (mes == 12 and dia <= 20):
+        return 'otono'
+    else:
+        return 'invierno'
+
+
+def seleccionar_imagenes_estacionales(imagenes_clustering):
+    """
+    De una lista de imágenes de clustering, selecciona 4 representativas (una por estación).
+    Elige la imagen cuya fecha sea más cercana al centro de cada estación.
+
+    Formato de nombre esperado: clustering_INDICE_YYYY-MM-DD_timestamp.png
+
+    Centros de estación (hemisferio norte):
+      Primavera → 5 de mayo      (mes 5, día 5)
+      Verano    → 5 de agosto    (mes 8, día 5)
+      Otoño     → 5 de noviembre (mes 11, día 5)
+      Invierno  → 5 de febrero   (mes 2, día 5)
+
+    Returns:
+        list of (estacion_str, fecha, path)  ordenada por estación
+    """
+    CENTROS = {
+        'primavera': (5, 5),
+        'verano':    (8, 5),
+        'otono':     (11, 5),
+        'invierno':  (2, 5),
+    }
+
+    patron = re.compile(r'clustering_\w+_(\d{4}-\d{2}-\d{2})_')
+    grupos = {est: [] for est in ESTACIONES_ORDEN}
+
+    for img_path in imagenes_clustering:
+        m = patron.search(img_path.stem)
+        if not m:
+            continue
+        try:
+            fecha = datetime.strptime(m.group(1), '%Y-%m-%d')
+        except ValueError:
+            continue
+        grupos[obtener_estacion(fecha)].append((fecha, img_path))
+
+    seleccionadas = []
+    for estacion in ESTACIONES_ORDEN:
+        candidatos = grupos[estacion]
+        if not candidatos:
+            continue
+        mes_c, dia_c = CENTROS[estacion]
+
+        def distancia(item, mes_c=mes_c, dia_c=dia_c):
+            fecha, _ = item
+            try:
+                centro = datetime(fecha.year, mes_c, dia_c)
+            except ValueError:
+                centro = datetime(fecha.year, mes_c, 28)
+            return abs((fecha - centro).days)
+
+        candidatos.sort(key=distancia)
+        seleccionadas.append((estacion, candidatos[0][0], candidatos[0][1]))
+
+    return seleccionadas  # list of (estacion, fecha, path)
 
 # Agregar rutas
 project_root = Path(__file__).parent.parent
@@ -278,9 +362,25 @@ QUÉ BUSCAR:
         agregar_seccion(pdf, f'ANÁLISIS {tipo.upper()}')
         
         # Buscar imágenes PNG
-        imagenes = sorted(carpeta_tipo.glob('*.png'))
+        todas_imagenes = sorted(carpeta_tipo.glob('*.png'))
         
-        for img_path in imagenes[:10]:  # Máximo 10 imágenes por tipo
+        if tipo == 'espacial':
+            # Separar clustering de otros mapas
+            clustering_imgs = [img for img in todas_imagenes if 'clustering' in img.stem.lower()]
+            otras_imgs      = [img for img in todas_imagenes if 'clustering' not in img.stem.lower()]
+            
+            # Seleccionar solo 4 imágenes estacionales de clustering
+            estacionales = seleccionar_imagenes_estacionales(clustering_imgs)
+            etiqueta_estacion = {str(path): (est, fecha)
+                                 for est, fecha, path in estacionales}
+            clustering_filtrado = [path for _, _, path in estacionales]
+            
+            imagenes = otras_imgs[:6] + clustering_filtrado
+        else:
+            imagenes = todas_imagenes[:10]  # Máximo 10 imágenes por tipo
+            etiqueta_estacion = {}
+        
+        for img_path in imagenes:
             nombre_lower = img_path.stem.lower()
             
             # Para descomposición estacional: mostrar imagen completa sin texto adicional
@@ -303,8 +403,13 @@ QUÉ BUSCAR:
             fig.patch.set_facecolor('white')
             ax.set_facecolor('white')
             
-            # Título con nombre del archivo
+            # Título: si es clustering estacional, añadir etiqueta de estación
             titulo = img_path.stem.replace('_', ' ').title()
+            clave = str(img_path)
+            if clave in etiqueta_estacion:
+                est, fecha_rep = etiqueta_estacion[clave]
+                nombre_est = ESTACIONES_NOMBRE.get(est, est)
+                titulo = f'{nombre_est}  —  {fecha_rep.strftime("%d/%m/%Y")}'
             fig.text(0.5, 0.97, titulo,
                      ha='center', va='top', fontsize=14, fontweight='bold')
             

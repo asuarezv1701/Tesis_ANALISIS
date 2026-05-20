@@ -29,6 +29,7 @@ from analizador_tesis.procesador_base import (
 )
 from analizador_tesis.espacial import (
     clustering_kmeans,
+    clasificar_por_umbrales_canonicos,
     dividir_en_cuadrantes,
     detectar_hotspots,
     calcular_estadisticas_espaciales
@@ -112,6 +113,70 @@ def segmentar_por_clustering(imagenes_datos, n_zonas=5):
         'mascara_zonas': mascara_zonas_ordenada,
         'stats_zonas': resultado_cluster['stats_clusters'],
         'imagen_promedio': imagen_promedio
+    }
+
+
+def segmentar_por_umbrales_canonicos(imagenes_datos, indice):
+    """
+    Clasifica el área usando los umbrales científicos propios de cada índice.
+
+    Las zonas resultantes son idénticas en escala entre todas las fechas porque
+    los rangos provienen de la literatura de teledetección (no de los datos).
+    Esto permite responder directamente: "¿La zona X mejoró del invierno al verano?"
+    comparando el mismo color en cualquier dos mapas.
+
+    Args:
+        imagenes_datos: Lista de arrays 2D (una por fecha)
+        indice        : Nombre del índice (para consultar INDICES_INFO)
+
+    Returns:
+        dict con máscara de zonas, estadísticas, colores y etiquetas, o None.
+    """
+    print(f"\n{'='*80}")
+    print(f"SEGMENTACIÓN POR UMBRALES CANÓNICOS ({indice})")
+    print(f"{'='*80}")
+
+    umbrales = INDICES_INFO[indice].get('umbrales_canonicos')
+    if not umbrales:
+        print(f"   ERROR: No hay umbrales canónicos definidos para {indice}")
+        return None
+
+    print(f"\n📐 Umbrales canónicos para {indice} (fuente bibliográfica):")
+    for u in umbrales:
+        lim_sup_str = str(u['limite_superior']) if u['limite_superior'] != float('inf') else '∞'
+        print(f"   • Zona {u['zona']}: [{u['limite_inferior']}, {lim_sup_str}) → {u['etiqueta']}")
+
+    # Imagen promedio temporal como base de clasificación
+    print(f"\n[1] Calculando imagen promedio temporal...")
+    imagen_promedio = np.nanmean(imagenes_datos, axis=0)
+    n_validos = np.sum(~np.isnan(imagen_promedio))
+    print(f"   ✓ Píxeles válidos: {n_validos}")
+
+    print(f"\n[2] Aplicando clasificación por umbrales canónicos...")
+    resultado = clasificar_por_umbrales_canonicos(imagen_promedio, umbrales)
+
+    if not resultado:
+        print("   ERROR: Error en clasificación")
+        return None
+
+    print("\n[3] Estadísticas de zonas:")
+    for s in resultado['stats_zonas']:
+        if s['n_pixeles'] > 0:
+            print(f"   • Zona {s['cluster']} ({s['etiqueta']}): "
+                  f"{s['n_pixeles']} px ({s['porcentaje']:.1f}%), "
+                  f"Media={s['media']:.4f}")
+        else:
+            print(f"   • Zona {s['cluster']} ({s['etiqueta']}): 0 px (sin píxeles en este rango)")
+
+    return {
+        'metodo'         : 'canonico',
+        'n_zonas'        : resultado['n_zonas'],
+        'mascara_zonas'  : resultado['mascara_zonas'],
+        'stats_zonas'    : resultado['stats_zonas'],
+        'imagen_promedio': imagen_promedio,
+        'umbrales'       : umbrales,
+        'colores_zonas'  : [u['color']    for u in umbrales],
+        'etiquetas_zonas': [u['etiqueta'] for u in umbrales],
     }
 
 
@@ -401,7 +466,7 @@ def comparar_zonas(resultados_zonas):
 # FUNCIÓN PRINCIPAL DE SEGMENTACIÓN
 # ============================================================================
 
-def analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5):
+def analizar_segmentacion_indice(indice, metodo='canonico', n_zonas=5):
     """
     Realiza segmentación y análisis por zonas de un índice.
     
@@ -447,7 +512,9 @@ def analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5):
     print(f"\nCargadas {len(imagenes_datos)} imágenes")
     
     # Realizar segmentación
-    if metodo == 'clustering':
+    if metodo == 'canonico':
+        segmentacion = segmentar_por_umbrales_canonicos(imagenes_datos, indice)
+    elif metodo == 'clustering':
         segmentacion = segmentar_por_clustering(imagenes_datos, n_zonas=n_zonas)
     elif metodo == 'cuadrantes':
         # Usar imagen promedio como referencia
@@ -556,27 +623,53 @@ def generar_visualizaciones_segmentacion(indice, metodo, segmentacion, resultado
     
     visualizaciones = []
     
+    # Helper: construir colormap y leyenda si el método es canónico
+    def _aplicar_cmap_canonico(ax, mascara_zonas, segmentacion):
+        """Usa los colores y etiquetas científicas cuando el método es 'canonico'."""
+        from matplotlib.colors import ListedColormap, BoundaryNorm
+        colores   = segmentacion['colores_zonas']
+        etiquetas = segmentacion['etiquetas_zonas']
+        n         = len(colores)
+        cmap      = ListedColormap(colores)
+        cmap.set_bad('lightgray')
+        bounds = np.arange(-0.5, n, 1)
+        norm   = BoundaryNorm(bounds, cmap.N)
+        im     = ax.imshow(mascara_zonas, cmap=cmap, norm=norm, interpolation='nearest')
+        patches = [mpatches.Patch(color=colores[i], label=f"Z{i}: {etiquetas[i]}")
+                   for i in range(n)]
+        ax.legend(handles=patches, loc='lower right', fontsize=7, framealpha=0.8)
+        return im
+
+    usa_canonico = segmentacion.get('metodo') == 'canonico' and 'colores_zonas' in segmentacion
+
     # 1. Mapa de zonas
     archivo = carpeta_vis / f"mapa_zonas_{indice}_{metodo}_{timestamp}.png"
     fig, ax = plt.subplots(figsize=(10, 8))
-    
-    im = ax.imshow(segmentacion['mascara_zonas'], cmap='tab10', interpolation='nearest')
-    plt.colorbar(im, ax=ax, label='Zona ID')
-    ax.set_title(f'{indice} - Segmentación de Zonas\nMétodo: {metodo}')
+
+    if usa_canonico:
+        _aplicar_cmap_canonico(ax, segmentacion['mascara_zonas'], segmentacion)
+        ax.set_title(f'{indice} - Clasificación por Umbrales Canónicos')
+    else:
+        im = ax.imshow(segmentacion['mascara_zonas'], cmap='tab10', interpolation='nearest')
+        plt.colorbar(im, ax=ax, label='Zona ID')
+        ax.set_title(f'{indice} - Segmentación de Zonas\nMétodo: {metodo}')
     ax.axis('off')
-    
+
     plt.tight_layout()
     plt.savefig(archivo, dpi=150, bbox_inches='tight')
     plt.close()
     visualizaciones.append(archivo.name)
-    
+
     # 2. Mapa con estadísticas
     archivo = carpeta_vis / f"mapa_estadisticas_{indice}_{metodo}_{timestamp}.png"
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    
+
     # Zonas
     ax = axes[0]
-    im = ax.imshow(segmentacion['mascara_zonas'], cmap='tab10', interpolation='nearest')
+    if usa_canonico:
+        _aplicar_cmap_canonico(ax, segmentacion['mascara_zonas'], segmentacion)
+    else:
+        im = ax.imshow(segmentacion['mascara_zonas'], cmap='tab10', interpolation='nearest')
     ax.set_title('Zonas Identificadas')
     ax.axis('off')
     
@@ -600,22 +693,23 @@ def generar_visualizaciones_segmentacion(indice, metodo, segmentacion, resultado
     
     # 3. Series temporales por zona
     archivo = carpeta_vis / f"series_temporales_{indice}_{metodo}_{timestamp}.png"
-    
-    n_zonas = segmentacion['n_zonas']
+
+    zonas_ids = sorted(resultados_zonas.keys())
+    n_zonas = len(zonas_ids)
     n_cols = min(3, n_zonas)
     n_rows = int(np.ceil(n_zonas / n_cols))
-    
+
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 4*n_rows))
     if n_zonas == 1:
         axes = np.array([axes])
     axes = axes.flatten()
-    
-    for zona_id in range(n_zonas):
-        ax = axes[zona_id]
+
+    for plot_idx, zona_id in enumerate(zonas_ids):
+        ax = axes[plot_idx]
         df_zona = resultados_zonas[zona_id]['df']
-        
+
         ax.plot(df_zona['fecha'], df_zona['media'], 'o-', linewidth=2, markersize=6)
-        
+
         # Línea de tendencia si existe
         if resultados_zonas[zona_id]['tendencia']:
             tend = resultados_zonas[zona_id]['tendencia']
@@ -625,29 +719,29 @@ def generar_visualizaciones_segmentacion(indice, metodo, segmentacion, resultado
             ax.plot(df_zona['fecha'], y_pred, 'r--', linewidth=2, alpha=0.7,
                    label=f"Tendencia (R²={tend['r2']:.3f})")
             ax.legend()
-        
+
         ax.set_title(f'Zona {zona_id}')
         ax.set_xlabel('Fecha')
         ax.set_ylabel(indice)
         ax.grid(True, alpha=0.3)
         ax.tick_params(axis='x', rotation=45)
-    
+
     # Ocultar axes sobrantes
     for i in range(n_zonas, len(axes)):
         axes[i].axis('off')
-    
+
     plt.suptitle(f'{indice} - Evolución Temporal por Zona', fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig(archivo, dpi=150, bbox_inches='tight')
     plt.close()
     visualizaciones.append(archivo.name)
-    
+
     # 4. Comparación de tendencias
     archivo = carpeta_vis / f"comparacion_tendencias_{indice}_{metodo}_{timestamp}.png"
     fig, ax = plt.subplots(figsize=(12, 6))
-    
+
     tendencias_data = []
-    for zona_id in range(n_zonas):
+    for zona_id in zonas_ids:
         if resultados_zonas[zona_id]['tendencia']:
             tend = resultados_zonas[zona_id]['tendencia']
             tendencias_data.append({
@@ -711,10 +805,11 @@ def menu_principal():
             print(f"  {i}. {indice:<8} - {INDICES_INFO[indice]['nombre']}")
         
         print("\nMÉTODOS DE SEGMENTACIÓN:")
+        print("  T. Umbrales canónicos (rangos científicos por índice) ← RECOMENDADO")
+        print("  A. Analizar TODOS los índices con umbrales canónicos")
         print("  C. Clustering (K-means con coordenadas)")
         print("  Q. Cuadrantes (división regular del espacio)")
         print("  P. Percentiles (por rangos de valores)")
-        print("  A. Analizar TODOS los índices con clustering")
         print("  0. Salir")
         
         opcion = input("\nSelecciona una opción: ").strip().upper()
@@ -722,11 +817,22 @@ def menu_principal():
         if opcion == '0':
             break
         
+        elif opcion == 'T':
+            # Índice individual con umbrales canónicos
+            print("\nSelecciona el índice:")
+            for i, indice in enumerate(indices_disponibles, 1):
+                print(f"  {i}. {indice}")
+            idx_str = input("Número: ").strip()
+            if idx_str.isdigit():
+                idx = int(idx_str) - 1
+                if 0 <= idx < len(indices_disponibles):
+                    analizar_segmentacion_indice(indices_disponibles[idx], metodo='canonico')
+
         elif opcion == 'A':
-            # Todos los índices con clustering
+            # Todos los índices con umbrales canónicos
             for indice in indices_disponibles:
-                analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5)
-        
+                analizar_segmentacion_indice(indice, metodo='canonico')
+
         elif opcion in ['C', 'Q', 'P']:
             # Seleccionar índice
             print("\nSelecciona el índice:")
@@ -762,22 +868,22 @@ def menu_principal():
                 metodo=metodo_map[opcion],
                 n_zonas=n_zonas
             )
-        
+
         elif opcion.isdigit():
             num = int(opcion) - 1
             if 0 <= num < len(indices_disponibles):
-                # Análisis rápido con clustering
-                analizar_segmentacion_indice(indices_disponibles[num], metodo='clustering', n_zonas=5)
+                # Análisis rápido con umbrales canónicos
+                analizar_segmentacion_indice(indices_disponibles[num], metodo='canonico')
 
 
 if __name__ == "__main__":
     import os
     if os.environ.get('ANALISIS_AUTOMATICO') == '1':
-        # Modo automático: analizar todos los índices con clustering
-        print("\nModo automático: segmentando TODOS los índices con clustering\n")
+        # Modo automático: umbrales canónicos para comparabilidad entre fechas
+        print("\nModo automático: segmentando TODOS los índices con umbrales canónicos\n")
         indices_disponibles = obtener_indices_disponibles()
         for indice in indices_disponibles:
-            analizar_segmentacion_indice(indice, metodo='clustering', n_zonas=5)
+            analizar_segmentacion_indice(indice, metodo='canonico')
     else:
         # Modo manual: mostrar menú
         menu_principal()

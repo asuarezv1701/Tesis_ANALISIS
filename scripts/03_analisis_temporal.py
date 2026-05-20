@@ -270,7 +270,16 @@ def realizar_analisis_temporal(df, indice):
     if stats_mensuales is not None:
         print(f"   • Meses con datos: {len(stats_mensuales)}")
         resultados['estadisticas_mensuales'] = stats_mensuales
-    
+
+    # 9. Tendencia interanual por estación (Propuesta 2)
+    print("\n[9] Calculando tendencia interanual por estación...")
+    tendencia_est = analizar_tendencia_interanual_estacional(df, indice)
+    if tendencia_est is not None:
+        print(f"   • Estaciones analizadas: {len(tendencia_est)}")
+        for est, datos_est in tendencia_est.items():
+            print(f"     - {est}: {len(datos_est)} años con datos")
+        resultados['tendencia_interanual'] = tendencia_est
+
     print("\n" + "="*80)
     print("\nANÁLISIS TEMPORAL COMPLETADO")
     print("="*80)
@@ -382,7 +391,14 @@ def generar_visualizaciones_temporales(resultados, indice):
             archivo = carpeta_vis / f"descomposicion_estacional_{indice}_{timestamp}.png"
             graficar_descomposicion(resultados['descomposicion'], indice, archivo)
             visualizaciones_creadas.append(archivo.name)
-        
+
+        # 6. Tendencia interanual por estación (Propuesta 2)
+        if 'tendencia_interanual' in resultados:
+            archivo = carpeta_vis / f"tendencia_interanual_estacional_{indice}_{timestamp}.png"
+            graficar_tendencia_interanual_estacional(
+                resultados['tendencia_interanual'], indice, archivo)
+            visualizaciones_creadas.append(archivo.name)
+
         print(f"✓ Generadas {len(visualizaciones_creadas)} visualizaciones")
         for nombre in visualizaciones_creadas:
             print(f"  • {nombre}")
@@ -651,6 +667,237 @@ def graficar_descomposicion(decomp, indice, archivo_salida):
     plt.close()
 
 
+def analizar_tendencia_interanual_estacional(df, indice):
+    """
+    Agrupa las observaciones por estación y año, calcula la media de cada
+    combinación, y devuelve un dict {estacion: DataFrame(año, media_estacional)}.
+
+    Permite responder: "¿El verano de 2023 tuvo más vegetación que el de 2020?"
+    Es decir, revela si la vegetación de una misma época del año está mejorando
+    o deteriorando a lo largo de los años, eliminando el ruido del ciclo estacional.
+
+    Args:
+        df: DataFrame con columnas 'fecha' (datetime) y 'media'.
+        indice: str, nombre del índice.
+
+    Returns:
+        dict: {estacion_str: DataFrame con columnas ['año', 'media', 'n']}
+              Ordenado cronológicamente.
+    """
+    def obtener_estacion(mes, dia):
+        if (mes == 3 and dia >= 21) or mes in [4, 5] or (mes == 6 and dia <= 20):
+            return 'Primavera'
+        elif (mes == 6 and dia >= 21) or mes in [7, 8] or (mes == 9 and dia <= 22):
+            return 'Verano'
+        elif (mes == 9 and dia >= 23) or mes in [10, 11] or (mes == 12 and dia <= 20):
+            return 'Otoño'
+        else:
+            return 'Invierno'
+
+    df_work = df.copy()
+    df_work['año']     = df_work['fecha'].dt.year
+    df_work['estacion'] = df_work['fecha'].apply(
+        lambda f: obtener_estacion(f.month, f.day))
+
+    resultado = {}
+    ORDEN = ['Primavera', 'Verano', 'Otoño', 'Invierno']
+    for est in ORDEN:
+        sub = df_work[df_work['estacion'] == est].copy()
+        if sub.empty:
+            continue
+        agg = (sub.groupby('año')['media']
+               .agg(['mean', 'count'])
+               .reset_index()
+               .rename(columns={'mean': 'media', 'count': 'n'}))
+        agg = agg.sort_values('año')
+        resultado[est] = agg
+    return resultado if resultado else None
+
+
+def graficar_tendencia_interanual_estacional(datos_estacionales, indice, archivo_salida):
+    """
+    Genera una gráfica con una línea por estación mostrando cómo evoluciona el
+    valor medio de esa estación año tras año.
+
+    Cada punto = media de TODOS los valores de ese índice en esa estación
+    durante ese año (ej. todos los veranos de 2021 promediados en un punto).
+    """
+    import matplotlib.pyplot as plt
+
+    COLORES = {
+        'Primavera': '#4CAF50',
+        'Verano':    '#FF9800',
+        'Otoño':     '#795548',
+        'Invierno':  '#2196F3',
+    }
+    MARKERS = {
+        'Primavera': 'o',
+        'Verano':    's',
+        'Otoño':     '^',
+        'Invierno':  'D',
+    }
+
+    fig, ax = plt.subplots(figsize=(13, 7))
+
+    for est, df_est in datos_estacionales.items():
+        color  = COLORES.get(est, 'black')
+        marker = MARKERS.get(est, 'o')
+        ax.plot(df_est['año'], df_est['media'], marker=marker, linewidth=2,
+                markersize=8, label=est, color=color)
+        # Banda de n observaciones como anotación en los puntos
+        for _, row in df_est.iterrows():
+            ax.annotate(f'n={int(row["n"])}',
+                        xy=(row['año'], row['media']),
+                        xytext=(0, 8), textcoords='offset points',
+                        ha='center', fontsize=7, color=color)
+
+    ax.set_xlabel('Año', fontsize=11)
+    ax.set_ylabel(f'Media {indice}', fontsize=11)
+    ax.set_title(f'{indice} — Tendencia Interanual por Estación\n'
+                 f'¿Cómo cambia cada estación año a año?',
+                 fontsize=13, fontweight='bold')
+    ax.legend(title='Estación', loc='best')
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
+    # Nota explicativa
+    ax.text(0.01, 0.02,
+            'Cada punto = media de todas las imágenes de esa estación en ese año.\n'
+            'n = número de imágenes promediadas.',
+            transform=ax.transAxes, fontsize=8, color='#555',
+            bbox=dict(boxstyle='round', facecolor='#F5F5F5', alpha=0.7))
+
+    plt.tight_layout()
+    plt.savefig(archivo_salida, dpi=150, bbox_inches='tight')
+    plt.close()
+
+
+def analizar_correlacion_todos_indices():
+    """
+    Lee los archivos de serie temporal de TODOS los índices disponibles,
+    los une por fecha y calcula la matriz de correlación de Pearson.
+
+    Permite responder: "¿Cuando NDVI sube, también sube NDMI? ¿O se mueven
+    de forma independiente?" Fundamental para validar la consistencia del
+    análisis multíndice.
+
+    Returns:
+        tuple: (df_merged, df_corr, archivo_png)
+               df_merged : DataFrame con columna por cada índice, filas = fechas comunes.
+               df_corr   : Matriz de correlación de Pearson.
+               archivo_png: Path al PNG generado.
+    """
+    import matplotlib.pyplot as plt
+    from configuracion.config import RUTA_REPORTES, RUTA_VISUALIZACIONES, INDICES_INFO
+
+    print("\n" + "="*80)
+    print("ANÁLISIS DE CORRELACIÓN ENTRE ÍNDICES (Propuesta 5)")
+    print("="*80)
+
+    ruta_temporal = RUTA_REPORTES / "03_temporal"
+    if not ruta_temporal.exists():
+        print("ADVERTENCIA: No hay reportes temporales generados aún.")
+        return None, None, None
+
+    series = {}
+    for indice in INDICES_INFO:
+        csvs = sorted(ruta_temporal.glob(f"serie_temporal_{indice}_*.csv"), reverse=True)
+        if not csvs:
+            print(f"  ⚠ Sin datos temporales para {indice}")
+            continue
+        try:
+            df_idx = pd.read_csv(csvs[0])
+            df_idx['fecha'] = pd.to_datetime(df_idx['fecha'])
+            df_idx = df_idx[['fecha', 'media']].rename(columns={'media': indice})
+            series[indice] = df_idx
+            print(f"  ✓ {indice}: {len(df_idx)} fechas")
+        except Exception as e:
+            print(f"  ⚠ Error al leer {indice}: {e}")
+
+    if len(series) < 2:
+        print("ADVERTENCIA: Se necesitan al menos 2 índices para calcular correlación.")
+        return None, None, None
+
+    # Unir por fecha (inner join: solo fechas presentes en TODOS los índices)
+    df_merged = None
+    for indice, df_idx in series.items():
+        if df_merged is None:
+            df_merged = df_idx
+        else:
+            df_merged = df_merged.merge(df_idx, on='fecha', how='inner')
+
+    df_merged = df_merged.sort_values('fecha')
+    print(f"\n  Fechas comunes a todos los índices: {len(df_merged)}")
+
+    indices_cols = list(series.keys())
+    df_corr = df_merged[indices_cols].corr(method='pearson')
+
+    print("\n  Matriz de correlación de Pearson:")
+    print(df_corr.round(3).to_string())
+
+    # Guardar CSV de correlaciones
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    csv_corr = ruta_temporal / f"correlacion_indices_{timestamp}.csv"
+    df_corr.to_csv(csv_corr)
+    print(f"\n  CSV guardado: {csv_corr.name}")
+
+    # Visualización: heatmap + scatter plots
+    n = len(indices_cols)
+    fig = plt.figure(figsize=(7 + n * 2, 6 + n * 1.5))
+    gs = fig.add_gridspec(n, n + 1, wspace=0.4, hspace=0.4)
+
+    # Scatter matrix (n×n)
+    for i, idx_i in enumerate(indices_cols):
+        for j, idx_j in enumerate(indices_cols):
+            ax = fig.add_subplot(gs[i, j])
+            if i == j:
+                ax.hist(df_merged[idx_i].dropna(), bins=20, color='steelblue', alpha=0.7)
+                ax.set_title(idx_i, fontsize=9, fontweight='bold')
+            else:
+                r = df_corr.loc[idx_i, idx_j]
+                color = '#E53935' if abs(r) > 0.7 else ('#FF9800' if abs(r) > 0.4 else '#9E9E9E')
+                ax.scatter(df_merged[idx_j], df_merged[idx_i],
+                           alpha=0.4, s=10, color=color)
+                ax.text(0.05, 0.92, f'r={r:.2f}', transform=ax.transAxes,
+                        fontsize=8, fontweight='bold', color=color)
+            if i == n - 1:
+                ax.set_xlabel(idx_j, fontsize=8)
+            if j == 0:
+                ax.set_ylabel(idx_i, fontsize=8)
+            ax.tick_params(labelsize=6)
+
+    # Heatmap de correlación en la columna extra
+    ax_heat = fig.add_subplot(gs[:, n])
+    import matplotlib.colors as mcolors
+    cmap_corr = plt.cm.RdYlGn
+    im = ax_heat.imshow(df_corr.values, cmap=cmap_corr, vmin=-1, vmax=1,
+                        aspect='auto')
+    ax_heat.set_xticks(range(n))
+    ax_heat.set_yticks(range(n))
+    ax_heat.set_xticklabels(indices_cols, rotation=45, ha='right', fontsize=8)
+    ax_heat.set_yticklabels(indices_cols, fontsize=8)
+    ax_heat.set_title('Correlación\nPearson', fontsize=9, fontweight='bold')
+    for i in range(n):
+        for j in range(n):
+            ax_heat.text(j, i, f'{df_corr.iloc[i, j]:.2f}',
+                         ha='center', va='center', fontsize=8, fontweight='bold',
+                         color='white' if abs(df_corr.iloc[i, j]) > 0.6 else 'black')
+    plt.colorbar(im, ax=ax_heat, fraction=0.046, pad=0.04)
+
+    fig.suptitle('Correlación entre Índices de Vegetación\n'
+                 '(r=1: misma dirección, r=0: independientes, r=-1: opuestos)',
+                 fontsize=12, fontweight='bold', y=1.01)
+
+    carpeta_multi = RUTA_VISUALIZACIONES / "comparativo" / "temporal"
+    carpeta_multi.mkdir(exist_ok=True, parents=True)
+    archivo_png = carpeta_multi / f"correlacion_indices_{timestamp}.png"
+    plt.savefig(archivo_png, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print(f"  Visualización guardada: {archivo_png}")
+
+    return df_merged, df_corr, archivo_png
+
+
 # ============================================================================
 # MENÚ PRINCIPAL
 # ============================================================================
@@ -682,6 +929,7 @@ def menu_principal():
         
         print("\nOPCIONES:")
         print("  A. Analizar TODOS los índices")
+        print("  C. Correlación entre índices (requiere haber analizado todos antes)")
         print("  0. Salir")
         
         opcion = input("\nSelecciona una opción: ").strip().upper()
@@ -691,6 +939,15 @@ def menu_principal():
         elif opcion == 'A':
             for indice in indices_disponibles:
                 analizar_temporal_indice(indice)
+            try:
+                analizar_correlacion_todos_indices()
+            except Exception as e:
+                print(f"ADVERTENCIA: Error en correlación: {e}")
+        elif opcion == 'C':
+            try:
+                analizar_correlacion_todos_indices()
+            except Exception as e:
+                print(f"ADVERTENCIA: Error en correlación: {e}")
         elif opcion.isdigit():
             num = int(opcion) - 1
             if 0 <= num < len(indices_disponibles):
@@ -705,6 +962,11 @@ if __name__ == "__main__":
         indices_disponibles = obtener_indices_disponibles()
         for indice in indices_disponibles:
             analizar_temporal_indice(indice)
+        # Correlación cruzada después de procesar todos los índices
+        try:
+            analizar_correlacion_todos_indices()
+        except Exception as e:
+            print(f"ADVERTENCIA: Error en correlación entre índices: {e}")
     else:
         # Modo manual: mostrar menú
         menu_principal()
